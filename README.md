@@ -1,7 +1,7 @@
 # nuxeo-fontoxml
 
 ## WARNING
-This is **Work In Progress**. Using GitHub as backup for now.
+This is **Work In Progress**. Using GitHub as backup for now.
 
 nuxeo-fontoxml is a _Proof of Concept_, a plugin allowing for editing XML file within Nuxeo, using the [FontoXML Editor](https://www.fontoxml.com) and its support for DITA documents.
 
