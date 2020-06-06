@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<fragment version="1">
+
+  <extension target="web#SERVLET">
+
+    <servlet>
+      <servlet-name>Nuxeo FontoXML Servlet</servlet-name>
+      <servlet-class>nuxeo.fontoxml.servlet.FontoXMLServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+      <servlet-name>Nuxeo FontoXML Servlet</servlet-name>
+      <url-pattern>/fontoxml</url-pattern>
+      <url-pattern>/fontoxml/*</url-pattern>
+    </servlet-mapping>
+
+  </extension>
+  
+  <extension target="web#STD-AUTH-FILTER">
+
+    <filter-mapping>
+      <filter-name>NuxeoAuthenticationFilter
+      </filter-name>
+      <url-pattern>/fontoxml</url-pattern>
+      <dispatcher>REQUEST</dispatcher>
+      <dispatcher>FORWARD</dispatcher>
+    </filter-mapping>
+    <filter-mapping>
+      <filter-name>NuxeoAuthenticationFilter
+      </filter-name>
+      <url-pattern>/fontoxml/*</url-pattern>
+      <dispatcher>REQUEST</dispatcher>
+      <dispatcher>FORWARD</dispatcher>
+    </filter-mapping>
+
+  </extension>
+
+</fragment>

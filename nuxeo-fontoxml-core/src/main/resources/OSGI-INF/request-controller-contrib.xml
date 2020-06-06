@@ -1,0 +1,10 @@
+<component name="nuxeo.fontoxml.request.controller">
+
+  <extension target="org.nuxeo.ecm.platform.web.common.requestcontroller.service.RequestControllerService"
+    point="filterConfig">
+    <filterConfig name="fontoxml" transactional="true">
+      <pattern>${org.nuxeo.ecm.contextPath}/fontoxml.*</pattern>
+    </filterConfig>
+  </extension>
+
+</component>
