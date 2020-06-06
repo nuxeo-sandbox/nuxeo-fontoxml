@@ -45,7 +45,7 @@ nxserver
 
 ```
 git clone https://github.com/nuxeo-fontoxml.git
-cd nuxeo-powerpoint-utils
+cd nuxeo-fontoxml
 
 mvn clean install
 ```
