@@ -25,9 +25,15 @@ nxserver
 * We call it after embedding Fonto in an iFrame
   * WARNING: We do not use the Fonto XML iFrame Connector, we use the Standard Connector, that makes HTTP requests to Nuxeo
 
+* We recommend setting `autoSave` to false when initializing the Fonto Editor, it sends a lot of request (2 seconds after each edit.
+  * Fonto allows for detecting it's "auto save" so we can optimize the database load, maybe, but still. Saving every n seconds does not really scale. => In this POC it will work, because you usually test a POC on very few documents :-)
+
 * Now a not-really-started and not-finished :-) list of items in the context of this POC
   * *IMPORTANT*: This is a POC, not a final product
-  * We don't use `editSessionToken` and `revisionId`
+  * We don't really make usag `editSessionToken` and `revisionId`
+  * Locking is done per Fonto request. So, if the document was alrerady locked and Fonto asks us to unlock it at some point, we do unlock it.
+    * This will likely need to be optimize in the final product
+    * Also, Fonto sends a POST /document/state to get lock info: A custom build requiring this info less often would be good, and the POC just return cached info, we don't re-calculate the lock every time Font is asking us.
   * No unit test
     * Will likely require to mockup Fonto requests
   * Implemented endpoints

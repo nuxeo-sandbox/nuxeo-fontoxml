@@ -63,8 +63,12 @@ import org.nuxeo.ecm.core.api.impl.blob.StringBlob;
  */
 /*
  * @TODO Write quick doc/README about the scope of this POC
- * Here is a quick, unordered list
- * - . . .
+ * Here is a quick, unordered list of done/not done
+ * - done: . . .
+ * - Lock is handled once. So we don't recheck the document all the time, don't release all the time either etc.
+ * This will have to be improved in the product, of course, we are just optimizing for the POC
+ * - We use heartbeat but always return OK +> >TO BE TUNED
+ * In out test, it is set tio "every 30s"
  * - We don't use the editSession tocken
  * - unimplemented endpoints.features:
  * Multi-load documents (this POC always loads one by one)
@@ -85,6 +89,8 @@ public class FontoXMLServlet extends HttpServlet {
 
     public static final String PATH_DOCUMENT_LOCK = "/document/lock";
 
+    public static final String PATH_HEARTBEAT = "/heartbeat";
+
     public static final String PARAM_CONTEXT = "context";
 
     public static final String PARAM_DOC_ID = "documentId";
@@ -100,7 +106,7 @@ public class FontoXMLServlet extends HttpServlet {
         // String uri = req.getRequestURI();
 
         String path = req.getPathInfo();
-        log.warn("GET - getPathInfo => " + path);
+        log.warn("GET " + path);
 
         if (path.equals(PATH_DOCUMENT)) {
             String context = req.getParameter(PARAM_CONTEXT);
@@ -142,18 +148,36 @@ public class FontoXMLServlet extends HttpServlet {
                     // - Required: XML content
                     responseJson.put("content", xml);
                     // - Required: Lock info
-                    JSONObject lock = new JSONObject();
-                    lock.put("isLockAcquired", false);
-                    lock.put("isLockAvailable", true);
+                    JSONObject lock = getLockInfoForFonto(doc);
                     responseJson.put("lock", lock);
                     // - Optional, documentContext
                     //   ("CMS-specific data associated with the document. Will be included in related requests.")
                     //   . . . maybe do optimization and put in there data that will then not need to be recalculated or
                     //   re-fetched.. . .
-                    //   We set some values there to check we really get them back
                     JSONObject documentContext = new JSONObject();
-                    documentContext.put("docPath", doc.getPathAsString());
-                    documentContext.put("specialToken", 1234);
+                    // We save in our private context the same object
+                    documentContext.put("lockInfo", lock);
+                    /*
+                     * if(session.hasPermission(doc.getRef(), "Write")) {
+                     * Lock lockInfo = doc.getLockInfo();
+                     * if (lockInfo == null) {
+                     * documentContext.put("canBeLocked", true);
+                     * documentContext.put("isLockedByMe", false);
+                     * } else {
+                     * documentContext.put("canBeLocked", false); // already locked
+                     * if(lockInfo.getOwner().equals(session.getPrincipal().getName())) {
+                     * documentContext.put("isLockedByMe", true);
+                     * } else {
+                     * documentContext.put("isLockedByMe", false);
+                     * documentContext.put("lockReason", "The document is locked by another user.");
+                     * }
+                     * }
+                     * } else {
+                     * documentContext.put("canBeLocked", false);
+                     * documentContext.put("isLockedByMe", false);
+                     * documentContext.put("lockReason", "The document cannot be modified by this user");
+                     * }
+                     */
                     responseJson.put("documentContext", documentContext);
                     // - Optional, revisionId
                     //   (unused)
@@ -168,7 +192,10 @@ public class FontoXMLServlet extends HttpServlet {
                 throw new NuxeoException("Failed to jaon-parse the <context> parameter", e);
             }
 
-        } // if (path.equals(GET_DOCUMENT)) . . . to be continued . . .
+        } else if (path.endsWith(PATH_HEARTBEAT)) { // if (path.equals(GET_DOCUMENT)) . . . to be continued . . .
+            // We don't implement all logic and always return OK
+            sendOKResponse(resp, null);
+        }
 
     }
 
@@ -176,84 +203,50 @@ public class FontoXMLServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
         String path = req.getPathInfo();
-        log.warn("POST - getPathInfo => " + path);
+        log.warn("POST " + path);
 
         String body = IOUtils.toString(req.getReader());
-        log.warn("POST, body:\n" + body);
+        // log.warn("POST, body:\n" + body);
         try {
             JSONObject bodyJson = new JSONObject(body);
             try (CloseableCoreSession session = CoreInstance.openCoreSession(null)) {
                 switch (path) {
                 // "Can be used to periodically retrieve the most recent lock state and revisionId for a set of
                 // documents"
+                // IMPLEMENTATION - POC WARNING
+                // We use the documentContext to cache the lock info when it is modified (GET /document and
+                // /PUT /document/lock)
+                // This means, we don't check if the lock or the permissions have changed.
+                // => OK in the context of a POC
+                // TODO Change the /document/state call frequency (I think it requires a different build of Fonto) and
+                // recalculate all if needed
                 case PATH_DOCUMENT_STATE:
                     JSONObject context = bodyJson.getJSONObject(PARAM_CONTEXT);
                     JSONArray documents = bodyJson.getJSONArray(PARAM_DOCUMENTS);
-
-                    // log.warn("context: " + context.toString(2));
-                    // log.warn("documents: " + documents.toString(2));
-
-                    JSONObject responseJson = new JSONObject();
                     JSONArray results = new JSONArray();
 
                     // Received an array of document info, must return lock state values in the same order
                     int max = documents.length();
                     for (int i = 0; i < max; i++) {
                         JSONObject oneDocInfo = documents.getJSONObject(i);
-                        String docId = oneDocInfo.getString("documentId");
-                        // Custom, "private" data
-                        JSONObject documentContext = null;
-                        if (oneDocInfo.has("documentContext")) {
-                            documentContext = oneDocInfo.getJSONObject("documentContext");
-                        }
+                        JSONObject documentContext = oneDocInfo.getJSONObject("documentContext");
+                        JSONObject lockInfo = documentContext.getJSONObject("lockInfo");
 
-                        JSONObject oneResult = new JSONObject();
-                        // Get doc
-                        DocumentRef docRef = new IdRef(docId);
-                        if (!session.exists(docRef)) {
-                            // log.warn("docId " + docId + " not found");
-                            oneResult.put("status", HttpServletResponse.SC_NOT_FOUND);
-                            results.put(i, oneResult);
-                            continue;
-                        }
-
-                        DocumentModel doc = session.getDocument(docRef);
-                        // if(documentContext != null) {
-                        // log.warn("documentContext for " + doc.getTitle() + ":\n" + documentContext.toString(2));
-                        // } else {
-                        // log.warn("No documentContext for " + doc.getTitle());
-                        // }
-
-                        // Get lock info
-                        boolean canLock = false;
-                        try {
-                            if (!doc.isLocked()) {
-                                @SuppressWarnings("unused")
-                                Lock docLock = session.setLock(docRef);
-                                canLock = true;
-                            } else {
-                                Lock lockInfo = doc.getLockInfo();
-                                canLock = lockInfo.getOwner().equals(session.getPrincipal().getName());
-                            }
-                        } catch (LockException e) {
-                            // Ignore, we just don't lock the document
-                        }
-
-                        JSONObject lock = new JSONObject();
-                        lock.put("isLockAcquired", canLock);
-                        lock.put("isLockAvailable", true);
-
+                        // So. We just return the lock info as we have it, not recalculating it.
                         JSONObject bodyResult = new JSONObject();
                         bodyResult.put("documentContext", documentContext);
-                        bodyResult.put("lock", lock);
+                        bodyResult.put("lock", lockInfo);
                         // bodyResult.put("revisionId", "some id");
 
+                        JSONObject oneResult = new JSONObject();
                         oneResult.put("status", HttpServletResponse.SC_OK);
                         oneResult.put("body", bodyResult);
                         results.put(i, oneResult);
 
+                        log.warn("isLockAcquired: " + lockInfo.getBoolean("isLockAcquired"));
                     }
 
+                    JSONObject responseJson = new JSONObject();
                     responseJson.put("results", results);
                     String response = responseJson.toString();
                     sendOKResponse(resp, response);
@@ -271,7 +264,7 @@ public class FontoXMLServlet extends HttpServlet {
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
         String path = req.getPathInfo();
-        log.warn("PUT - getPathInfo => " + path);
+        log.warn("PUT " + path);
 
         String body = IOUtils.toString(req.getReader());
         try {
@@ -294,8 +287,8 @@ public class FontoXMLServlet extends HttpServlet {
                     String revisionId = bodyJson.optString("revisionId", null);
                     JSONObject metadata = bodyJson.optJSONObject("metadata");
 
-                    log.warn("PUT " + PATH_DOCUMENT + ", body:\n" + body);
-                    
+                    // log.warn("PUT " + PATH_DOCUMENT + ", body:\n" + body);
+
                     DocumentRef docRef = new IdRef(docId);
                     if (!session.exists(docRef)) {
                         log.warn("docId " + docId + " not found");
@@ -303,7 +296,7 @@ public class FontoXMLServlet extends HttpServlet {
                     } else {
                         DocumentModel doc = session.getDocument(docRef);
                         // . . . create a version . . .
-                        // Not really, because Fonto sends a PUT very often during modification
+                        // Not really, because Fonto can sends PUT very often during modification when autoSave is true
                         Blob blob = (Blob) doc.getPropertyValue("file:content");
                         Blob newBlob = new StringBlob(xmlContent, "text/xml");
                         newBlob.setFilename(blob.getFilename());
@@ -326,13 +319,14 @@ public class FontoXMLServlet extends HttpServlet {
                             sendResponse(resp, 204, null);
                         }
                     }
-                    
+
                 }
                     break;
 
                 // ========================================
                 // PUT /document/lock
                 // This service is used by FontoXML to acquire or release a lock on a given document.
+                // See GET /document and POST /document/state. We use the documentContext to handle the lock
                 // ========================================
                 case PATH_DOCUMENT_LOCK: {
                     JSONObject context = bodyJson.getJSONObject("context");
@@ -340,7 +334,7 @@ public class FontoXMLServlet extends HttpServlet {
                     JSONObject lock = bodyJson.getJSONObject("lock");
                     boolean acquireLock = lock.getBoolean("isLockAcquired");
                     String revisionId = bodyJson.optString("revisionId", null);
-                    JSONObject documentContext = bodyJson.optJSONObject("documentContext");
+                    JSONObject documentContext = bodyJson.getJSONObject("documentContext");
 
                     DocumentRef docRef = new IdRef(docId);
                     if (!session.exists(docRef)) {
@@ -372,7 +366,21 @@ public class FontoXMLServlet extends HttpServlet {
                                 // Ignore, we just don't unlock the document
                             }
                         }
-                        // Cf. FontoXML PAI doc:
+
+                        // Update the private data lock info
+                        JSONObject lockInfoForFonto = getLockInfoForFonto(doc);
+                        // Little tweak. If it was originally locked, then pretend we succesfuly unlocked it
+                        documentContext.put("lockInfo", lockInfoForFonto);
+
+                        /*
+                         * String msg = "acquireLock: " + acquireLock;
+                         * msg += "\nisLockedByMe: " + isLockedByMe;
+                         * msg += "\nlockRemoved: " + lockRemoved;
+                         * msg += "\nlockInfoForFonto:\n" + lockInfoForFonto.toString(2);
+                         * log.warn(msg);
+                         */
+
+                        // Cf. FontoXML API doc:
                         // Return 200 if the lock was set/unset _and_ the body of the response may contain an updated
                         // documentContext.
                         // Return 204 is lock was set/unset and the documentContext is not updated.
@@ -422,6 +430,38 @@ public class FontoXMLServlet extends HttpServlet {
     protected void sendOKResponse(HttpServletResponse resp, String response) throws IOException {
 
         sendResponse(resp, HttpServletResponse.SC_OK, response);
+    }
+
+    /*
+     * Return the objects as expected by Fonto
+     * This method must not modify the document (could be called in a GET)
+     */
+    protected JSONObject getLockInfoForFonto(DocumentModel doc) throws JSONException {
+
+        JSONObject lock = new JSONObject();
+
+        if (doc.isLocked()) {
+            Lock docLockInfo = doc.getLockInfo();
+            if (docLockInfo.getOwner().equals(doc.getCoreSession().getPrincipal().getName())) {
+                // Locked by me, all good
+                lock.put("isLockAcquired", true);
+                lock.put("isLockAvailable", true);
+            } else {
+                lock.put("isLockAcquired", false);
+                lock.put("isLockAvailable", false);
+                lock.put("reason", "The document is locked by another user.");
+            }
+        } else {
+            lock.put("isLockAcquired", false);
+            if (doc.getCoreSession().hasPermission(doc.getRef(), "Write")) {
+                lock.put("isLockAvailable", true);
+            } else {
+                lock.put("isLockAvailable", false);
+                lock.put("reason", "The document cannot be modified by this user");
+            }
+        }
+
+        return lock;
     }
 
     @Override
