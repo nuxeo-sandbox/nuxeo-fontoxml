@@ -54,7 +54,7 @@ import org.nuxeo.runtime.api.Framework;
  * - WE ASSUME THE CURRENT USER CAN READ ROOT AND ALL
  * - WE ASSUME AN XML ALWAYS HAS THE "text/xml" mime-type
  * **************************************************
- * 
+ * Also, we do not handle the "sort" optional parameter, always order by title.
  * @since 10.10
  */
 /*
@@ -287,6 +287,8 @@ public class DocumentBrowser {
             DocumentModel root = session.getDocument(new PathRef("/"));
             nxql += " AND ecm:parentId = '" + root.getId() + "'";
         }
+        
+        nxql += " ORDER BY dc:title ASC";
 
         return nxql;
 
