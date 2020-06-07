@@ -20,6 +20,7 @@ nuxeo-fontoxml is a plugin allowing for editing XML file within Nuxeo, using the
 - [About Nuxeo](#about-nuxeo)
 
 
+<a name="about-the-integration-requirements"></a>
 ## About the Integration - Requirements
 
 * See Fonto API, especially in its [Integrate with a CMS](https://documentation.fontoxml.com/editor/latest/integrate-with-a-cms-3099086.html) part.
@@ -29,6 +30,7 @@ nuxeo-fontoxml is a plugin allowing for editing XML file within Nuxeo, using the
 _Note_: In our POC, we tested with a distribution that includes DITA capabilities.
 
 
+<a name="deployment-displaying-fonto-in-the-ui"></a>
 ## Deployment - Displaying Fonto in the UI
 
 * Assuming you have a distribution of FontoXML, you must make it available for the first call, when it is first loaded
