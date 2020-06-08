@@ -95,33 +95,38 @@ this.url = url;
 ## Features in the Context of this POC
 Now, a not-really-started, not-finished :-) and _unordered_ list of items in the context of this POC
 
-  * **Implemented endpoints** (see `FontoXMLServlet`):
-    * (**IMPORTANT REMINDER** (in case we did not enough stress this point :-)): This is a POC implementation, not a final product)
-    * `GET /document`
-    * `GET /asset/preview`
-    * `GET /heartbeat`
-    * `POST /browse`
-    * `POST /document/state`
-    * `PUT /document`
-    * `PUT /document/lock`
-  * This POC does not implement versioning policy. This should be done in final product (when to create version(s) automatically, likely a configuration parameter)
-  * We don't really make usage of `editSessionToken` and `revisionId`
-  * Locking is done per Fonto request. So, if the document was already locked and Fonto asks us to unlock it at some point, we do unlock it.
-    * This will likely need to be optimized in the final product
-    * Also, Fonto sends a `POST /document/state` to get lock info: A custom build requiring this info less often would be good, and the POC just return cached info, we don't re-calculate the lock every time Font is asking us.
-  * When **browsing Nuxeo**:
-    * _We only handle default document types_ ("File", "Picture", ...) <br/> => Room for improvement and configuration in a final product to handle custom document types.
-    * This POC **does not handle pagination** (as the `POST /browse` end point parameters could allow)
-    * Also, we **assume an XML Blob always has "text/xml" mime-type**
-    * We do not handle a "document-template" type in the context of this POC.
-    * We ignore the "sort" parameter => always sorting by title (this also could be configuration)
-    * **This POC assumes the user can READ root/domain/etc.**
-  * We rarely returns a 403, not authorized. Nuxeo security policy is that if a user can't read a document, they should not even know it exists. So, when trying to access a document a 404 is returned. Some Fonto API requires a 403 for messaging though.
-  * Maybe pre-calculated renditions should be implemented, ti be used when browsing.<br /> Fonto's API documentation requires a thumbnail be exactly 128x128 and a "web" rendition should be max 1024. In this POC, we get the thumbnail (so it's easy and done in one line of code) and resize it accordingly. This is not optimized at all.
-  * **No unit test** (yet...)
-  * Simultaneous loading of several documents is not implemented (this POC always loads one by one)
-  * The `documentContext` is currently mainly used as a cache for the POST /document/state regular calls. This object looks very interesting and should likely be used in the final product.
-  * . . .
+* **Implemented endpoints** (see `FontoXMLServlet`):
+  * (**IMPORTANT REMINDER** (in case we did not enough stress this point :-)): This is a POC implementation, not a final product)
+  * `GET /document`
+  * `GET /asset/preview`
+  * `GET /heartbeat`
+  * `POST /browse`
+  * `POST /document/state`
+  * `PUT /document`
+  * `PUT /document/lock`
+* This POC does not implement versioning policy. This should be done in final product (when to create version(s) automatically, likely a configuration parameter)
+* We don't really make usage of `editSessionToken` and `revisionId`
+* Locking is done per Fonto request. So, if the document was already locked and Fonto asks us to unlock it at some point, we do unlock it.
+  * This will likely need to be optimized in the final product
+  * Also, Fonto sends a `POST /document/state` to get lock info: A custom build requiring this info less often would be good, and the POC just return cached info, we don't re-calculate the lock every time Font is asking us.
+* This POC Mainly assumes current user can at least READ the parents of the current document.
+* When **browsing Nuxeo**:
+  * _We only handle default document types_ ("File", "Picture", ...) <br/> => Room for improvement and configuration in a final product to handle custom document types.
+  * This POC **does not handle pagination** (as the `POST /browse` end point parameters could allow)
+  * Also, we **assume an XML Blob always has "text/xml" mime-type**
+  * We do not handle a "document-template" type in the context of this POC.
+  * The algorithm must be modified in the final product. The search should handle both the `assetTypes` and `resultTypes` passed by Fonto. The POC filters afterward (not optimized)
+  * We ignore the "sort" parameter => always sorting by title (this also could be configuration)
+  * **This POC assumes the user can READ root/domain/etc.**
+* We rarely returns a 403, not authorized. Nuxeo security policy is that if a user can't read a document, they should not even know it exists. So, when trying to access a document a 404 is returned. Some Fonto API requires a 403 for messaging though.
+* Maybe pre-calculated renditions should be implemented, ti be used when browsing.<br /> Fonto's API documentation requires a thumbnail be exactly 128x128 and a "web" rendition should be max 1024. In this POC, we get the thumbnail (so it's easy and done in one line of code) and resize it accordingly. This is not optimized at all.
+* **No unit test** (yet...)
+* Simultaneous loading of several documents is not implemented (this POC always loads one by one)
+* The `documentContext` is currently mainly used as a cache for the POST /document/state regular calls. This object looks very interesting and should likely be used in the final product.
+* **TO BE EXPLORED**
+    * During testing, ThumbnailService had hard time generating a new Thupmbnail for a modified DITA document, aftet fonto added its own tag => Maybe there is a need to write a new ThumbnailFactiry...
+    * Same for fulltext index. It looks like it's failing => Need to add it to the converters
+* . . .
  
 
 # Build

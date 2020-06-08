@@ -16,26 +16,21 @@
  * Contributors:
  *     Thibaud Arguillere
  */
-/*
- * ************************************************************************
- * ************************************************************************
- * WARNING - THIS IS WORK IN PROGRESS (June 2020)
- * Needs refactoring (lots of copy/paste of same codeà, cleanup, etc.
- * AND optimizations.
- * ************************************************************************
- * ************************************************************************
- * 
- */
 package nuxeo.fontoxml.servlet;
+
+import static nuxeo.fontoxml.servlet.Constants.*;
+import static nuxeo.fontoxml.servlet.FontoXMLServlet.MIME_TYPE_XML;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.nio.charset.Charset;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.Part;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -55,6 +50,8 @@ import org.nuxeo.ecm.core.api.LockException;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.api.impl.blob.StringBlob;
 import org.nuxeo.ecm.core.api.thumbnail.ThumbnailService;
+import org.nuxeo.ecm.platform.filemanager.api.FileImporterContext;
+import org.nuxeo.ecm.platform.filemanager.api.FileManager;
 import org.nuxeo.ecm.platform.picture.api.ImageInfo;
 import org.nuxeo.ecm.platform.picture.api.ImagingService;
 import org.nuxeo.runtime.api.Framework;
@@ -66,25 +63,7 @@ import org.nuxeo.runtime.api.Framework;
  * @since 10.10
  */
 /*
- * @TODO Write quick doc/README about the scope of this POC
- * Here is a quick, unordered list of done/not done
- * - done: . . .
- * - Lock is handled once. So we don't recheck the document all the time, don't release all the time either etc.
- * This will have to be improved in the product, of course, we are just optimizing for the POC
- * - When browsing Nuxeo, we only handle default document types ("File", "Picture", ...)
- *   - => Room for improvement and configuration in a final product to handle custom document types, if any
- * - We also don't handle specific Picture renditions, etc.
- * - Also, we don't handle document-template in browse
- * - ASSUMES THE USER CAN READ root, root/aDomain etc.
- * - We use heartbeat but always return OK +> >TO BE TUNED
- * In out test, it is set tio "every 30s"
- * - We don't use the editSession token
- * - unimplemented endpoints.features:
- * Multi-load documents (this POC always loads one by one)
- * . . .
- * Idea of usage for type documentContext: Add a boolean that will give the lock state of the
- * document at first load. So if it was already locked, we don't release the lock when asked
- * byt Fonto (but tell it it was released)
+ * Please, read the README for a list of features/implementation/"not implemented"/shortcuts used for this POC/ etc.
  */
 public class FontoXMLServlet extends HttpServlet {
 
@@ -93,35 +72,6 @@ public class FontoXMLServlet extends HttpServlet {
     private static final Log log = LogFactory.getLog(FontoXMLServlet.class);
 
     public static final String MIME_TYPE_XML = "text/xml";
-
-    public static final String PATH_DOCUMENT = "/document";
-
-    public static final String PATH_DOCUMENT_STATE = "/document/state";
-
-    public static final String PATH_DOCUMENT_LOCK = "/document/lock";
-
-    public static final String PATH_HEARTBEAT = "/heartbeat";
-
-    public static final String PATH_BROWSE = "/browse";
-
-    public static final String PATH_ASSET_PREVIEW = "/asset/preview";
-
-    // The following are the names of the properties in the JSON body (or the query string)
-    public static final String PARAM_CONTEXT = "context";
-
-    public static final String PARAM_DOC_ID = "documentId";
-
-    public static final String PARAM_ID = "id";
-
-    public static final String PARAM_VARIANT = "variant";
-
-    public static final String PARAM_CONTENT = "content";
-
-    public static final String PARAM_LOCK = "lock";
-
-    public static final String PARAM_DOCUMENTS = "documents";
-
-    public static final String PARAM_DOCUMENT_CONTEXT = "documentContext";
 
     // Variables/members
     protected static ThumbnailService thumbnailService = null;
@@ -150,7 +100,7 @@ public class FontoXMLServlet extends HttpServlet {
 
         case PATH_HEARTBEAT:
             // POC CONTEXT: We don't implement all logic and always return OK
-            sendOKResponse(resp, null);
+            ServletUtils.sendOKStringResponse(resp, null);
             break;
 
         default:
@@ -170,6 +120,10 @@ public class FontoXMLServlet extends HttpServlet {
             case PATH_BROWSE:
                 DocumentBrowser browser = new DocumentBrowser(req, resp);
                 browser.browse();
+                break;
+
+            case PATH_ASSET:
+                handlePostAsset(req, resp);
                 break;
 
             case PATH_DOCUMENT_STATE:
@@ -199,24 +153,6 @@ public class FontoXMLServlet extends HttpServlet {
         }
     }
 
-    public static void sendResponse(HttpServletResponse resp, int status, String response) throws IOException {
-
-        resp.setStatus(status);
-
-        if (StringUtils.isNotBlank(response)) {
-            resp.setContentType("application/json");
-            resp.setContentLength(response.getBytes().length);
-            OutputStream out = resp.getOutputStream();
-            out.write(response.getBytes());
-            out.close();
-        }
-    }
-
-    protected void sendOKResponse(HttpServletResponse resp, String response) throws IOException {
-
-        sendResponse(resp, HttpServletResponse.SC_OK, response);
-    }
-
     /*
      * Return the objects as expected by Fonto
      * This method must not modify the document (could be called in a GET)
@@ -229,20 +165,20 @@ public class FontoXMLServlet extends HttpServlet {
             Lock docLockInfo = doc.getLockInfo();
             if (docLockInfo.getOwner().equals(doc.getCoreSession().getPrincipal().getName())) {
                 // Locked by me, all good
-                lock.put("isLockAcquired", true);
-                lock.put("isLockAvailable", true);
+                lock.put(PARAM_LOCK_ACQUIRED, true);
+                lock.put(PARAM_LOCK_AVAILABLE, true);
             } else {
-                lock.put("isLockAcquired", false);
-                lock.put("isLockAvailable", false);
-                lock.put("reason", "The document is locked by another user.");
+                lock.put(PARAM_LOCK_ACQUIRED, false);
+                lock.put(PARAM_LOCK_AVAILABLE, false);
+                lock.put(PARAM_LOCK_REASON, "The document is locked by another user.");
             }
         } else {
-            lock.put("isLockAcquired", false);
+            lock.put(PARAM_LOCK_ACQUIRED, false);
             if (doc.getCoreSession().hasPermission(doc.getRef(), "Write")) {
-                lock.put("isLockAvailable", true);
+                lock.put(PARAM_LOCK_AVAILABLE, true);
             } else {
-                lock.put("isLockAvailable", false);
-                lock.put("reason", "The document cannot be modified by this user");
+                lock.put(PARAM_LOCK_AVAILABLE, false);
+                lock.put(PARAM_LOCK_REASON, "The document cannot be modified by this user");
             }
         }
 
@@ -320,7 +256,7 @@ public class FontoXMLServlet extends HttpServlet {
                 //   (unused in this POC)
 
                 String response = responseJson.toString();
-                sendOKResponse(resp, response);
+                ServletUtils.sendOKStringResponse(resp, response);
             }
 
         } catch (JSONException e) {
@@ -388,20 +324,20 @@ public class FontoXMLServlet extends HttpServlet {
                     resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Cannot get a thumbnail");
                     return;
                 }
-                
+
                 // . . . RESIZE . . .
                 ImageInfo imageInfo = getImagingService().getImageInfo(thumbnail);
                 log.warn("Thumbnail size: " + imageInfo.getWidth() + "x" + imageInfo.getHeight());
                 switch (variant) {
                 case "thumbnail":
-                    if(imageInfo.getWidth() != 128 || imageInfo.getHeight() != 128) {
+                    if (imageInfo.getWidth() != 128 || imageInfo.getHeight() != 128) {
                         log.warn("RESIZING TO 128x128");
                         thumbnail = getImagingService().resize(thumbnail, imageInfo.getFormat(), 128, 128, -1);
                     }
                     break;
 
                 case "web":
-                    if(imageInfo.getWidth() > 1024 || imageInfo.getHeight() > 1024) {
+                    if (imageInfo.getWidth() > 1024 || imageInfo.getHeight() > 1024) {
                         log.warn("RESIZING TO max 1024x1024");
                         thumbnail = getImagingService().resize(thumbnail, imageInfo.getFormat(), 1024, 1024, -1);
                     }
@@ -424,6 +360,94 @@ public class FontoXMLServlet extends HttpServlet {
 
         } catch (JSONException e) {
             throw new NuxeoException("Failed to json-parse the <context> parameter", e);
+        }
+    }
+
+    /*
+     * POST /asset
+     * FontoXML will issue a multipart/form-data request containing the uploaded file and the metadata to associate with
+     * the file.
+     * The binary data of the file is always stored in the file field.
+     * -
+     * We use the FileManager importer to create the document.
+     * This is where a specific doc. type could be create instead.
+     */
+    protected void handlePostAsset(HttpServletRequest req, HttpServletResponse resp)
+            throws IOException, ServletException {
+        String body = IOUtils.toString(req.getReader());
+
+        Part request = req.getPart(PARAM_REQUEST);
+        Part file = req.getPart(PARAM_FILE);
+
+        String requestStr = IOUtils.toString(request.getInputStream(), Charset.forName("UTF-8"));
+        try {
+            JSONObject requestJson = new JSONObject(requestStr);
+            // Required
+            JSONObject context = requestJson.getJSONObject(PARAM_CONTEXT);
+            String type = requestJson.getString(PARAM_TYPE);
+            // Optional
+            String folderId = requestJson.optString(PARAM_FOLDER_ID, null);
+            // JSONObject metadata = requestJson.optJSONObject(PARAM_METADATA);
+
+            String docId = context.getString(PARAM_DOC_ID);
+
+            try (CloseableCoreSession session = CoreInstance.openCoreSession(null)) {
+                DocumentModel destContainer;
+                // If folderId is empty, it means "root". but we don't want to create at root level, do we? So, instead,
+                // we create a same level as current document
+                if (StringUtils.isBlank(folderId)) {
+                    // We assume the docId exists, the user is currently editing it and they have access to the parent
+                    destContainer = session.getParentDocument(new IdRef(docId));
+                } else {
+                    DocumentRef containerRef = new IdRef(folderId);
+                    if (!session.exists(containerRef)) {
+                        log.warn("Dest folder " + folderId + " not found");
+                        ServletUtils.sendStringResponse(resp, HttpServletResponse.SC_NOT_FOUND, null);
+                        return;
+                    }
+                    destContainer = session.getDocument(containerRef);
+                }
+
+                Blob blob = ServletUtils.createBlobFromPart(file);
+                // TODO create a custom doc type if needed. (configuration/etc.)
+                FileImporterContext fileCreationContext = FileImporterContext.builder(session, blob,
+                        destContainer.getPathAsString()).build();
+
+                DocumentModel asset = Framework.getService(FileManager.class)
+                                               .createOrUpdateDocument(fileCreationContext);
+
+                JSONObject result = new JSONObject();
+                result.put(PARAM_ID, asset.getId());
+                result.put(PARAM_LABEL, asset.getTitle());
+                // For "type",; see Fonto API doc: "The type of document, image, file or unknown."
+                switch (asset.getType()) {
+                case "File":
+                    break;
+
+                case "Picture":
+                    result.put(PARAM_TYPE, FONTO_TYPE_IMAGE);
+                    break;
+
+                case "Audio":
+                    result.put(PARAM_TYPE, FONTO_TYPE_AUDIO);
+                    break;
+
+                case "Video":
+                    result.put(PARAM_TYPE, FONTO_TYPE_VIDEO);
+                    break;
+
+                default:
+                    result.put(PARAM_TYPE, FONTO_TYPE_UNKNOWN);
+                    break;
+                }
+                
+                String response = result.toString();
+                ServletUtils.sendOKStringResponse(resp, response);
+
+            } // CloseableCoreSession
+
+        } catch (JSONException e) {
+            throw new NuxeoException("Failed to json-parse a string", e);
         }
     }
 
@@ -457,21 +481,21 @@ public class FontoXMLServlet extends HttpServlet {
                 // So. We just return the lock info as we have it, not recalculating it.
                 JSONObject bodyResult = new JSONObject();
                 bodyResult.put(PARAM_DOCUMENT_CONTEXT, documentContext);
-                bodyResult.put("lock", lockInfo);
-                // bodyResult.put("revisionId", "some id");
+                bodyResult.put(PARAM_LOCK, lockInfo);
+                // bodyResult.put(PARAM_REVISION_ID, "some id");
 
                 JSONObject oneResult = new JSONObject();
                 oneResult.put("status", HttpServletResponse.SC_OK);
-                oneResult.put("body", bodyResult);
+                oneResult.put(PARAM_BODY, bodyResult);
                 results.put(i, oneResult);
 
-                // log.warn("isLockAcquired: " + lockInfo.getBoolean("isLockAcquired"));
+                // log.warn("isLockAcquired: " + lockInfo.getBoolean(PARAM_LOCK_ACQUIRED));
             }
 
             JSONObject responseJson = new JSONObject();
             responseJson.put("results", results);
             String response = responseJson.toString();
-            sendOKResponse(resp, response);
+            ServletUtils.sendOKStringResponse(resp, response);
 
         } catch (JSONException e) {
             throw new NuxeoException("Failed to json-parse a string", e);
@@ -495,17 +519,17 @@ public class FontoXMLServlet extends HttpServlet {
                 String docId = bodyJson.getString(PARAM_DOC_ID);
                 String xmlContent = bodyJson.getString(PARAM_CONTENT);
                 // Optional:
-                boolean autosave = bodyJson.optBoolean("autosave");
+                boolean autosave = bodyJson.optBoolean(PARAM_AUTOSAVE);
                 JSONObject documentContext = bodyJson.getJSONObject(PARAM_DOCUMENT_CONTEXT);
-                String revisionId = bodyJson.optString("revisionId", null);
-                JSONObject metadata = bodyJson.optJSONObject("metadata");
+                String revisionId = bodyJson.optString(PARAM_REVISION_ID, null);
+                JSONObject metadata = bodyJson.optJSONObject(PARAM_METADATA);
 
                 // log.warn("PUT " + PATH_DOCUMENT + ", body:\n" + body);
 
                 DocumentRef docRef = new IdRef(docId);
                 if (!session.exists(docRef)) {
                     log.warn("docId " + docId + " not found");
-                    sendResponse(resp, HttpServletResponse.SC_NOT_FOUND, null);
+                    ServletUtils.sendStringResponse(resp, HttpServletResponse.SC_NOT_FOUND, null);
                 } else {
                     DocumentModel doc = session.getDocument(docRef);
                     // . . . create a version . . .
@@ -525,11 +549,11 @@ public class FontoXMLServlet extends HttpServlet {
                             bodyResult.put(PARAM_DOCUMENT_CONTEXT, documentContext);
                         }
                         if (StringUtils.isNotBlank(revisionId)) {
-                            bodyResult.put("revisionId", revisionId);
+                            bodyResult.put(PARAM_REVISION_ID, revisionId);
                         }
-                        sendResponse(resp, HttpServletResponse.SC_OK, bodyResult.toString());
+                        ServletUtils.sendStringResponse(resp, HttpServletResponse.SC_OK, bodyResult.toString());
                     } else {
-                        sendResponse(resp, 204, null);
+                        ServletUtils.sendStringResponse(resp, 204, null);
                     }
                 }
             } // CloseableCoreSession
@@ -549,17 +573,17 @@ public class FontoXMLServlet extends HttpServlet {
         try {
             JSONObject bodyJson = new JSONObject(body);
             try (CloseableCoreSession session = CoreInstance.openCoreSession(null)) {
-                JSONObject context = bodyJson.getJSONObject("context");
+                JSONObject context = bodyJson.getJSONObject(PARAM_CONTEXT);
                 String docId = bodyJson.getString("documentId");
                 JSONObject lock = bodyJson.getJSONObject(PARAM_LOCK);
-                boolean acquireLock = lock.getBoolean("isLockAcquired");
-                String revisionId = bodyJson.optString("revisionId", null);
+                boolean acquireLock = lock.getBoolean(PARAM_LOCK_ACQUIRED);
+                String revisionId = bodyJson.optString(PARAM_REVISION_ID, null);
                 JSONObject documentContext = bodyJson.getJSONObject(PARAM_DOCUMENT_CONTEXT);
 
                 DocumentRef docRef = new IdRef(docId);
                 if (!session.exists(docRef)) {
                     log.warn("docId " + docId + " not found");
-                    sendResponse(resp, HttpServletResponse.SC_NOT_FOUND, null);
+                    ServletUtils.sendStringResponse(resp, HttpServletResponse.SC_NOT_FOUND, null);
                 } else {
                     boolean isLockedByMe = false;
                     boolean lockRemoved = false;
@@ -599,16 +623,16 @@ public class FontoXMLServlet extends HttpServlet {
                             bodyResult.put(PARAM_DOCUMENT_CONTEXT, documentContext);
                         }
                         if (StringUtils.isNotBlank(revisionId)) {
-                            bodyResult.put("revisionId", revisionId);
+                            bodyResult.put(PARAM_REVISION_ID, revisionId);
                         }
                         // We return 200, "The lock has been successfully acquired/released. The body of the response
                         // may contain an updated documentContext."
                         // We don't return 204, "he lock has been successfully acquired/released. The documentContext is
                         // not updated."
-                        sendResponse(resp, HttpServletResponse.SC_OK, bodyResult.toString());
+                        ServletUtils.sendStringResponse(resp, HttpServletResponse.SC_OK, bodyResult.toString());
                     } else {
                         // 403
-                        sendResponse(resp, HttpServletResponse.SC_FORBIDDEN, null);
+                        ServletUtils.sendStringResponse(resp, HttpServletResponse.SC_FORBIDDEN, null);
                     }
 
                 }
@@ -638,5 +662,56 @@ public class FontoXMLServlet extends HttpServlet {
             imagingService = Framework.getService(ImagingService.class);
         }
         return imagingService;
+    }
+
+    /**
+     * Returns the Fonto document type (document, image, file, ... for the input document
+     * For this POC, this is based on the document type. Final product should be smarter (using facet, maybe?)
+     * (it actually returns "folder" if the document has the "Folderish" facet)
+     * 
+     * @param doc
+     * @return the type of document for Fonto
+     * @since 10.10
+     */
+    public static String getFontoType(DocumentModel doc) {
+        
+        if(doc.hasFacet("Folderish")) {
+            return FONTO_TYPE_FOLDER;
+        }
+        
+        if(!doc.hasSchema("file")) {
+            return FONTO_TYPE_UNKNOWN;
+        }
+        
+        Blob blob = (Blob) doc.getPropertyValue("file:content");
+        if(blob == null) {
+            return FONTO_TYPE_UNKNOWN;
+        }
+        
+        // TODO: Handle document-template...
+
+        switch (doc.getType()) {
+        case "File":
+            String mimeType = blob.getMimeType();
+            if (mimeType != null && mimeType.equals(MIME_TYPE_XML)) {
+                return FONTO_TYPE_DOCUMENT;
+            } else {
+                return FONTO_TYPE_FILE;
+            }
+            
+        case "Picture":
+            return FONTO_TYPE_IMAGE;
+            
+        case "Audio":
+            return FONTO_TYPE_AUDIO;
+            
+        case "Video":
+            return FONTO_TYPE_VIDEO;
+            
+        default:
+            return FONTO_TYPE_UNKNOWN;
+
+        }
+
     }
 }
