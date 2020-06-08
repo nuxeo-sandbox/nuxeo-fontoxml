@@ -19,7 +19,6 @@
 package nuxeo.fontoxml.servlet;
 
 import static nuxeo.fontoxml.servlet.Constants.*;
-import static nuxeo.fontoxml.servlet.FontoXMLServlet.MIME_TYPE_XML;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -87,7 +86,7 @@ public class FontoXMLServlet extends HttpServlet {
         // String uri = req.getRequestURI();
 
         String path = req.getPathInfo();
-        log.warn("GET " + path);
+        log.info("GET " + path);
 
         switch (path) {
         case PATH_DOCUMENT:
@@ -113,7 +112,7 @@ public class FontoXMLServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
         String path = req.getPathInfo();
-        log.warn("POST " + path);
+        log.info("POST " + path);
 
         try {
             switch (path) {
@@ -139,7 +138,7 @@ public class FontoXMLServlet extends HttpServlet {
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
         String path = req.getPathInfo();
-        log.warn("PUT " + path);
+        log.info("PUT " + path);
 
         switch (path) {
         case PATH_DOCUMENT:
@@ -215,13 +214,13 @@ public class FontoXMLServlet extends HttpServlet {
                 DocumentModel doc = session.getDocument(docRef);
                 Blob blob = (Blob) doc.getPropertyValue("file:content");
                 if (blob == null) {
-                    log.warn("No blob...");
+                    log.warn("No blob");
                     resp.sendError(HttpServletResponse.SC_NOT_FOUND, "This document has no blob");
                     return;
                 }
 
                 if (!StringUtils.equals(MIME_TYPE_XML, blob.getMimeType())) {
-                    log.warn("Not an XML blob...");
+                    log.warn("Not an XML blob");
                     resp.sendError(HttpServletResponse.SC_NOT_FOUND, "This document contains no XML");
                     return;
                 }
@@ -285,13 +284,7 @@ public class FontoXMLServlet extends HttpServlet {
         String assetId = req.getParameter(PARAM_ID);
         String variant = req.getParameter(PARAM_VARIANT);
 
-        /*
-         * log.warn("Context: " + context);
-         * log.warn("id: " + assetId);
-         * log.warn("variant: " + variant);
-         */
-
-        log.warn("GET /asset/preview - variant: " + variant);
+        log.info("variant: " + variant);
         try {
             JSONObject contextJson = new JSONObject(context);
             String mainDocId = contextJson.getString("documentId");
@@ -312,7 +305,7 @@ public class FontoXMLServlet extends HttpServlet {
                 }
                 Blob blob = (Blob) asset.getPropertyValue("file:content");
                 if (blob == null) {
-                    log.warn("Asset ID " + assetId + " (" + asset.getTitle() + ") has no blob...");
+                    log.warn("Asset ID " + assetId + " (" + asset.getTitle() + ") has no blob");
                     resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Asset has no file");
                     return;
                 }
@@ -320,31 +313,31 @@ public class FontoXMLServlet extends HttpServlet {
                 Blob thumbnail = getThumbnailService().getThumbnail(asset, session);
                 if (thumbnail == null) {
                     // We are screwed... Calculate a default one?
-                    log.warn("Asset ID " + assetId + " (" + asset.getTitle() + ") => cannot get a thumbnail...");
+                    log.warn("Asset ID " + assetId + " (" + asset.getTitle() + ") => cannot get a thumbnail");
                     resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Cannot get a thumbnail");
                     return;
                 }
 
                 // . . . RESIZE . . .
                 ImageInfo imageInfo = getImagingService().getImageInfo(thumbnail);
-                log.warn("Thumbnail size: " + imageInfo.getWidth() + "x" + imageInfo.getHeight());
+                log.info("Thumbnail size: " + imageInfo.getWidth() + "x" + imageInfo.getHeight());
                 switch (variant) {
                 case "thumbnail":
                     if (imageInfo.getWidth() != 128 || imageInfo.getHeight() != 128) {
-                        log.warn("RESIZING TO 128x128");
+                        log.info("RESIZING TO 128x128");
                         thumbnail = getImagingService().resize(thumbnail, imageInfo.getFormat(), 128, 128, -1);
                     }
                     break;
 
                 case "web":
                     if (imageInfo.getWidth() > 1024 || imageInfo.getHeight() > 1024) {
-                        log.warn("RESIZING TO max 1024x1024");
+                        log.info("RESIZING TO max 1024x1024");
                         thumbnail = getImagingService().resize(thumbnail, imageInfo.getFormat(), 1024, 1024, -1);
                     }
                     break;
 
                 default:
-                    log.warn("Unknow variant: " + variant);
+                    log.warn("Unhandled variant: " + variant);
                     break;
                 }
 
@@ -462,7 +455,6 @@ public class FontoXMLServlet extends HttpServlet {
      * => OK in the context of a POC
      * TODO Change the /document/state call frequency (I think it requires a different build of Fonto) and recalculate
      * all if needed
-     * NOTICE THAT doing so, we actually don't need a CoreSession. But well.
      */
     protected void handlePostDocumentState(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String body = IOUtils.toString(req.getReader());

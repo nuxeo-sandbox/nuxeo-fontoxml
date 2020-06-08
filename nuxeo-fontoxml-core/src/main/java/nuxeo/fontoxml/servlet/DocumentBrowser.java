@@ -29,14 +29,12 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.RegExUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.commons.logging.Log;
@@ -151,12 +149,13 @@ public class DocumentBrowser {
         try (CloseableCoreSession session = CoreInstance.openCoreSession(null)) {
 
             String nxql = buildNXQL(session);
-            /*
-             * String msg = "AssetTypes: " + assetTypes.toString();
-             * msg += "\nresultTypes: " + resultTypes.toString();
-             * msg += "NXQL:\n" + nxql;
-             * log.warn(msg);
-             */
+
+            if (log.isInfoEnabled()) {
+                String msg = "AssetTypes: " + assetTypes.toString();
+                msg += "\nresultTypes: " + resultTypes.toString();
+                msg += "NXQL:\n" + nxql;
+                log.info(msg);
+            }
 
             // For quick search of the type that is wanted
             // The query should have already return only the types of documents we want
@@ -166,7 +165,7 @@ public class DocumentBrowser {
             }
             boolean hasFontoFileAssetType = assetTypesList.contains(FONTO_TYPE_FILE);
             // ======================================== <Just for the POC context>
-            String msg = "";
+            String infoMsg = "";
             for (String assetType : assetTypesList) {
                 switch (assetType) {
                 case FONTO_TYPE_DOCUMENT:
@@ -179,12 +178,12 @@ public class DocumentBrowser {
                     break;
 
                 default:
-                    msg += assetType + " ";
+                    infoMsg += assetType + " ";
                     break;
                 }
             }
-            if (msg.length() > 0) {
-                log.warn("This POC does not handle browsing the following: " + msg);
+            if (infoMsg.length() > 0) {
+                log.warn("This POC does not handle browsing the following: " + infoMsg);
             }
             // ======================================== </Just for the POC context>
 
@@ -330,7 +329,7 @@ public class DocumentBrowser {
 
             results.put("totalItemCount", totalCount);
             results.put("items", items);
-            log.warn("RESULTS SENT TO FONTO:\n" + results.toString(2));
+            log.info("Results sent to Fonto:\n" + results.toString(2));
 
             ServletUtils.sendStringResponse(response, HttpServletResponse.SC_OK, results.toString());
         } // CloseableCoreSession

@@ -1,7 +1,7 @@
 # nuxeo-fontoxml
 
 ## About the Plugin
-nuxeo-fontoxml is a plugin allowing for editing XML file within Nuxeo, using the [FontoXML Editor](https://www.fontoxml.com).
+nuxeo-fontoxml is a plugin allowing for editing XML files within Nuxeo, using the [FontoXML Editor](https://www.fontoxml.com).
 
 
 ### WARNINGS
@@ -13,6 +13,9 @@ nuxeo-fontoxml is a plugin allowing for editing XML file within Nuxeo, using the
 # Table of Content
 - [About the Integration - Requirements](#about-the-integration-requirements)
 - [Deployment - Displaying Fonto in the UI](#deployment-displaying-fonto-in-the-ui)
+  * [Deployment of Fonto](#deployment-of-fonto) 
+  * [Displaying Fonto in the UI](#displaying-fonto-in-the-ui) 
+  * [Tuning Log Info at Runtime](#tuning-log-info-at-runtime) 
 - [Features in the Context of this POC](#features-in-the-context-of-this-poc)
 - [Build](#build)
 - [Support](#support)
@@ -33,7 +36,9 @@ _Note_: In our POC, we tested with a distribution that includes DITA capabilitie
 <a name="deployment-displaying-fonto-in-the-ui"></a>
 ## Deployment - Displaying Fonto in the UI
 
-* Assuming you have a distribution of FontoXML, you must make it available for the first call, when it is first loaded
+#### Deployment of Fonto
+Assuming you have a distribution of FontoXML, you must make it available for the first call, when it is first loaded
+
 * So, a distribution of FontoXML must be deployed on your server.
   * We cannot include a Fonto distribution with this plugin.
   * _But_ of course, you will easily build a Marketplace Package deploying _your_ specific Fonto XML distribution wherever you want in the `nuxeo.war` folder when Nuxeo starts.
@@ -50,7 +55,9 @@ nxserver
         index.html
         . . .
 ```
-  * For very quick test, we added an iFrame to the default nuxeo-file-view document, just adding:
+
+### Displaying Fonto in the UI
+For very quick test, we added an iFrame to the default nuxeo-file-view document, just adding:
 
 ```
 <nuxeo-card>
@@ -89,8 +96,25 @@ this.url = url;
 
 * **WARNING**: Even if Fonto is displayed in a iFrame, we do not use the _Fonto XML iFrame Connector_, we use the _Standard Connector_, that makes HTTP requests to Nuxeo
 
-* We recommend setting `autoSave` to false when initializing the Fonto Editor, it sends a lot of request (2 seconds after each edit.
+* In our testing, we set `autoSave` to `false` when initializing the Fonto Editor. `auytoSave`, when `true`, sends a request 2 seconds after each edit.
   * Fonto allows for detecting it's "auto save" so we can optimize the database load, maybe, but still. Saving every n seconds does not really scale. => In this POC it will work, because you usually test a POC on very few documents :-)
+  * This POC always save when requested to do so
+  * In our testing, with set `autosave` set to `false`, so, of course, changes are not saved until the user explicitly clicks the "Save" button in Fonto Editor.
+
+### Tuning Log Info at Runtime
+The plugin writes some warnings in server.log when needed. For more informations you can activate the info level in the Log4j configuration. This will log more details (like the request received, the parameters, etc.). In order to do so:
+
+* On your server, modify the `log4j2.xml` file, at `{Nuxeo Home}/lib`
+  * Find the `<Loggers>` part
+  * Add the following:
+
+```
+<Logger name="nuxeo.fontoxml.servlet.FontoXMLServlet" level="info" />
+<Logger name="nuxeo.fontoxml.servlet.DocumentBrowser" level="info" />
+```
+  * Save
+* No need to restart the server, changes in `log4j2.xml` are handled dynamically
+* Which means, you also can change the `level` back to `"warn"` when you don't need the info anymore (no need to restart Nuxeo)
 
 ## Features in the Context of this POC
 Now, a not-really-started, not-finished :-) and _unordered_ list of items in the context of this POC
@@ -101,6 +125,7 @@ Now, a not-really-started, not-finished :-) and _unordered_ list of items in the
   * `GET /asset/preview`
   * `GET /heartbeat`
   * `POST /browse`
+  * `POST /asset`
   * `POST /document/state`
   * `PUT /document`
   * `PUT /document/lock`
@@ -118,14 +143,18 @@ Now, a not-really-started, not-finished :-) and _unordered_ list of items in the
   * The algorithm must be modified in the final product. The search should handle both the `assetTypes` and `resultTypes` passed by Fonto. The POC filters afterward (not optimized)
   * We ignore the "sort" parameter => always sorting by title (this also could be configuration)
   * **This POC assumes the user can READ root/domain/etc.**
-* We rarely returns a 403, not authorized. Nuxeo security policy is that if a user can't read a document, they should not even know it exists. So, when trying to access a document a 404 is returned. Some Fonto API requires a 403 for messaging though.
-* Maybe pre-calculated renditions should be implemented, ti be used when browsing.<br /> Fonto's API documentation requires a thumbnail be exactly 128x128 and a "web" rendition should be max 1024. In this POC, we get the thumbnail (so it's easy and done in one line of code) and resize it accordingly. This is not optimized at all.
+* We rarely return a 403, not authorized. Nuxeo security policy is that if a user can't read a document, they should not even know it exists. So, when trying to access a document a 404 is returned. Some Fonto API requires a 403 for messaging though.
+* Maybe pre-calculated renditions should be implemented, to be used when browsing.<br /> Fonto's API documentation requires a "thumbnail" rendition be exactly 128x128 and a "web" rendition to be max 1024. In this POC, we get the thumbnail (so it's easy and done in one line of code) and resize it accordingly. This is not optimized at all.
 * **No unit test** (yet...)
 * Simultaneous loading of several documents is not implemented (this POC always loads one by one)
 * The `documentContext` is currently mainly used as a cache for the POST /document/state regular calls. This object looks very interesting and should likely be used in the final product.
 * **TO BE EXPLORED**
-    * During testing, ThumbnailService had hard time generating a new Thupmbnail for a modified DITA document, aftet fonto added its own tag => Maybe there is a need to write a new ThumbnailFactiry...
-    * Same for fulltext index. It looks like it's failing => Need to add it to the converters
+    * fulltext index fails on the test XML documents:
+
+```
+Could not extract fulltext of file [...] org.nuxeo.ecm.core.convert.api.ConversionException: Error during XML2Text conversion
+```
+
 * . . .
  
 
