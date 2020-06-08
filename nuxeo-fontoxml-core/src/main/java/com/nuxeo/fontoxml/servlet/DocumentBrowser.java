@@ -16,14 +16,13 @@
  * Contributors:
  *     Thibaud Arguillere
  */
-package nuxeo.fontoxml.servlet;
-
-import static nuxeo.fontoxml.servlet.Constants.*;
+package com.nuxeo.fontoxml.servlet;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import static nuxeo.fontoxml.servlet.FontoXMLServlet.*;
+import static com.nuxeo.fontoxml.servlet.Constants.*;
+import static com.nuxeo.fontoxml.servlet.FontoXMLServlet.*;
 
 import java.io.IOException;
 import java.io.Serializable;

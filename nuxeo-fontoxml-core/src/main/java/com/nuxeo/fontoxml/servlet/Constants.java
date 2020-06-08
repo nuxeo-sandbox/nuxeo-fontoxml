@@ -16,7 +16,7 @@
  * Contributors:
  *     Thibaud Arguillere
  */
-package nuxeo.fontoxml.servlet;
+package com.nuxeo.fontoxml.servlet;
 
 /**
  * Centralize the names of parameters/properties/query parameters as provided/expected by Fonto

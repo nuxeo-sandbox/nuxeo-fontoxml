@@ -16,7 +16,7 @@
  * Contributors:
  *     Thibaud Arguillere
  */
-package nuxeo.fontoxml.servlet;
+package com.nuxeo.fontoxml.servlet;
 
 import java.io.IOException;
 import java.io.OutputStream;

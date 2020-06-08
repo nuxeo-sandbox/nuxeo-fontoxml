@@ -16,9 +16,9 @@
  * Contributors:
  *     Thibaud Arguillere
  */
-package nuxeo.fontoxml.servlet;
+package com.nuxeo.fontoxml.servlet;
 
-import static nuxeo.fontoxml.servlet.Constants.*;
+import static com.nuxeo.fontoxml.servlet.Constants.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -72,10 +72,6 @@ public class FontoXMLServlet extends HttpServlet {
 
     public static final String MIME_TYPE_XML = "text/xml";
 
-    protected static ThumbnailService thumbnailService = null;
-
-    protected static ImagingService imagingService = null;
-
     /**
      * As it is a GET, we don't do anything at repository level, no change in the document,
      * not even a lock (which does modify data at database level)
@@ -103,6 +99,7 @@ public class FontoXMLServlet extends HttpServlet {
 
         default:
             log.warn("GET " + path + ", not handled");
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND);
             break;
         }
     }
@@ -130,6 +127,11 @@ public class FontoXMLServlet extends HttpServlet {
         case PATH_DOCUMENT_STATE:
             handlePostDocumentState(req, resp);
             break;
+
+        default:
+            log.warn("POST " + path + ", not handled");
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+            break;
         }
     }
 
@@ -148,6 +150,10 @@ public class FontoXMLServlet extends HttpServlet {
             handlePutDocumentLock(req, resp);
             break;
 
+        default:
+            log.warn("PUT " + path + ", not handled");
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+            break;
         }
     }
 
@@ -309,7 +315,7 @@ public class FontoXMLServlet extends HttpServlet {
                     return;
                 }
 
-                Blob thumbnail = getThumbnailService().getThumbnail(asset, session);
+                Blob thumbnail = Framework.getService(ThumbnailService.class).getThumbnail(asset, session);
                 if (thumbnail == null) {
                     // We are screwed... Calculate a default one?
                     log.warn("Asset ID " + assetId + " (" + asset.getTitle() + ") => cannot get a thumbnail");
@@ -318,20 +324,21 @@ public class FontoXMLServlet extends HttpServlet {
                 }
 
                 // . . . RESIZE . . .
-                ImageInfo imageInfo = getImagingService().getImageInfo(thumbnail);
+                ImagingService imagingService = Framework.getService(ImagingService.class);
+                ImageInfo imageInfo = imagingService.getImageInfo(thumbnail);
                 log.info("Thumbnail size: " + imageInfo.getWidth() + "x" + imageInfo.getHeight());
                 switch (variant) {
                 case "thumbnail":
                     if (imageInfo.getWidth() != 128 || imageInfo.getHeight() != 128) {
                         log.info("RESIZING TO 128x128");
-                        thumbnail = getImagingService().resize(thumbnail, imageInfo.getFormat(), 128, 128, -1);
+                        thumbnail = imagingService.resize(thumbnail, imageInfo.getFormat(), 128, 128, -1);
                     }
                     break;
 
                 case "web":
                     if (imageInfo.getWidth() > 1024 || imageInfo.getHeight() > 1024) {
                         log.info("RESIZING TO max 1024x1024");
-                        thumbnail = getImagingService().resize(thumbnail, imageInfo.getFormat(), 1024, 1024, -1);
+                        thumbnail = imagingService.resize(thumbnail, imageInfo.getFormat(), 1024, 1024, -1);
                     }
                     break;
 
@@ -637,22 +644,6 @@ public class FontoXMLServlet extends HttpServlet {
     @Override
     public void init() throws ServletException {
         log.info("Ready.");
-    }
-
-    protected ThumbnailService getThumbnailService() {
-        // In this context we don't care about concurrent request
-        if (thumbnailService == null) {
-            thumbnailService = Framework.getService(ThumbnailService.class);
-        }
-        return thumbnailService;
-    }
-
-    protected ImagingService getImagingService() {
-        // In this context we don't care about concurrent request
-        if (imagingService == null) {
-            imagingService = Framework.getService(ImagingService.class);
-        }
-        return imagingService;
     }
 
     /**
