@@ -72,7 +72,6 @@ public class FontoXMLServlet extends HttpServlet {
 
     public static final String MIME_TYPE_XML = "text/xml";
 
-    // Variables/members
     protected static ThumbnailService thumbnailService = null;
 
     protected static ImagingService imagingService = null;
@@ -114,23 +113,23 @@ public class FontoXMLServlet extends HttpServlet {
         String path = req.getPathInfo();
         log.info("POST " + path);
 
-        try {
-            switch (path) {
-            case PATH_BROWSE:
+        switch (path) {
+        case PATH_BROWSE:
+            try {
                 DocumentBrowser browser = new DocumentBrowser(req, resp);
                 browser.browse();
-                break;
-
-            case PATH_ASSET:
-                handlePostAsset(req, resp);
-                break;
-
-            case PATH_DOCUMENT_STATE:
-                handlePostDocumentState(req, resp);
-                break;
+            } catch (JSONException e) {
+                throw new NuxeoException("Failed to json-parse a string", e);
             }
-        } catch (JSONException e) {
-            throw new NuxeoException("Failed to json-parse a string", e);
+            break;
+
+        case PATH_ASSET:
+            handlePostAsset(req, resp);
+            break;
+
+        case PATH_DOCUMENT_STATE:
+            handlePostDocumentState(req, resp);
+            break;
         }
     }
 
@@ -433,7 +432,7 @@ public class FontoXMLServlet extends HttpServlet {
                     result.put(PARAM_TYPE, FONTO_TYPE_UNKNOWN);
                     break;
                 }
-                
+
                 String response = result.toString();
                 ServletUtils.sendOKStringResponse(resp, response);
 
@@ -666,20 +665,20 @@ public class FontoXMLServlet extends HttpServlet {
      * @since 10.10
      */
     public static String getFontoType(DocumentModel doc) {
-        
-        if(doc.hasFacet("Folderish")) {
+
+        if (doc.hasFacet("Folderish")) {
             return FONTO_TYPE_FOLDER;
         }
-        
-        if(!doc.hasSchema("file")) {
+
+        if (!doc.hasSchema("file")) {
             return FONTO_TYPE_UNKNOWN;
         }
-        
+
         Blob blob = (Blob) doc.getPropertyValue("file:content");
-        if(blob == null) {
+        if (blob == null) {
             return FONTO_TYPE_UNKNOWN;
         }
-        
+
         // TODO: Handle document-template...
 
         switch (doc.getType()) {
@@ -690,16 +689,16 @@ public class FontoXMLServlet extends HttpServlet {
             } else {
                 return FONTO_TYPE_FILE;
             }
-            
+
         case "Picture":
             return FONTO_TYPE_IMAGE;
-            
+
         case "Audio":
             return FONTO_TYPE_AUDIO;
-            
+
         case "Video":
             return FONTO_TYPE_VIDEO;
-            
+
         default:
             return FONTO_TYPE_UNKNOWN;
 
