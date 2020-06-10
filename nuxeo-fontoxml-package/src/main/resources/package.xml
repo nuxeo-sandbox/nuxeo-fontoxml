@@ -2,9 +2,10 @@
 <package type="addon" name="nuxeo-fonto-xml-integration" version="@VERSION@">
   <title>Nuxeo fonto xml integration</title>
   <description>
-    <p>Put here an HTML description of your Nuxeo Package.</p>
+    <p>This plugin allows for integrating the Fonto XML Editor to Nuxeo, to edit XML files.</p>
+    <p>It requires a Fonto Editor build (contact Fonto for this)</p>
   </description>
-  <!-- <home-page>http://doc.nuxeo.com/</home-page> -->
+  <home-page>https://github.com/nuxeo-sandbox/nuxeo-fontoxml</home-page>
   <vendor>Nuxeo</vendor>
   <installer restart="true" />
   <uninstaller restart="true" />
@@ -35,8 +36,8 @@
   <!-- <provides> -->
   <!-- <package>an-embedded-package:1.0.0:1.0.0</package> -->
   <!-- </provides> -->
-  <license></license>
-  <license-url></license-url>
+  <license>Apache 2.0</license>
+  <license-url>http://www.apache.org/licenses/LICENSE-2.0</license-url>
   <!-- Visibility: PRIVATE | MARKETPLACE | DEV | PUBLIC -->
-  <visibility>DEV</visibility>
+  <visibility>PUBLIC</visibility>
 </package>
