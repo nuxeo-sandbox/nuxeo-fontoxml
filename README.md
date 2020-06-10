@@ -3,6 +3,8 @@
 ## About the Plugin
 nuxeo-fontoxml is a plugin allowing for editing XML files within Nuxeo, using the [FontoXML Editor](https://www.fontoxml.com).
 
+[![Build Status](https://qa.nuxeo.org/jenkins/buildStatus/icon?job=Sandbox/sandbox_nuxeo-fontoxml-master)](https://qa.nuxeo.org/jenkins/job/Sandbox/job/sandbox_nuxeo-fontoxml-master/)
+
 
 ### WARNINGS
 1. This is **Work In Progress**.
