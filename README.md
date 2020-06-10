@@ -7,9 +7,9 @@ nuxeo-fontoxml is a plugin allowing for editing XML files within Nuxeo, using th
 
 
 ### WARNINGS
-1. This is **Work In Progress**.
+* This plugin is a **Proof of Concept** (POC), it is not a final product. We want to show Nuxeo can integrate the Fonto XML Editor and interact with it. As a POC it does not handle all and every features a final product will have (see below for more details).
 
-2. Also, this plugin is a **Proof of Concept** (POC), it is not a final product. We want to show Nuxeo can integrate the Fonto XML Editor and interact with it. As a POC it does not handle all and every features a final product will have (see below for more details).
+* Also (see below) you need to deploy your custom distribution of Fonto in order to display your XML files
 
 
 # Table of Content
@@ -31,6 +31,7 @@ nuxeo-fontoxml is a plugin allowing for editing XML files within Nuxeo, using th
 * See Fonto API, especially in its [Integrate with a CMS](https://documentation.fontoxml.com/editor/latest/integrate-with-a-cms-3099086.html) part.
 * Fonto is distributed as a static Single Page Application that must be served by Nuxeo (so, no CORS, user is already authenticated, etc.)
 * The Fonto distribution must have been built with the different schemas you plan to use: Contact FontoXML for this purpose, Nuxeo does not provide Fonto XML builds.
+* This also means **the Fonto Editor does not display all and every XML** files, even if well formatted and embedding its own DTD. You will still need a distribution of Font handling your specific schemas.
 
 _Note_: In our POC, we tested with a distribution that includes DITA capabilities.
 
@@ -96,12 +97,11 @@ this.url = url;
  • • •
  ```
 
-* **WARNING**: Even if Fonto is displayed in a iFrame, we do not use the _Fonto XML iFrame Connector_, we use the _Standard Connector_, that makes HTTP requests to Nuxeo
+* **WARNING**: Even if Fonto is displayed in an iFrame, we do not use the _Fonto XML iFrame Connector_, we use the _Standard Connector_, that makes HTTP requests to Nuxeo
 
 * In our testing, we set `autoSave` to `false` when initializing the Fonto Editor. `auytoSave`, when `true`, sends a request 2 seconds after each edit.
   * Fonto allows for detecting it's "auto save" so we can optimize the database load, maybe, but still. Saving every n seconds does not really scale. => In this POC it will work, because you usually test a POC on very few documents :-)
   * This POC always save when requested to do so
-  * In our testing, with set `autosave` set to `false`, so, of course, changes are not saved until the user explicitly clicks the "Save" button in Fonto Editor.
 
 ### Tuning Log Info at Runtime
 The plugin writes some warnings in server.log when needed. For more informations you can activate the info level in the Log4j configuration. This will log more details (like the request received, the parameters, etc.). In order to do so:
@@ -131,7 +131,9 @@ Now, a not-really-started, not-finished :-) and _unordered_ list of items in the
   * `POST /document/state`
   * `PUT /document`
   * `PUT /document/lock`
-* This POC does not implement versioning policy. This should be done in final product (when to create version(s) automatically, likely a configuration parameter)
+* This POC does not implement versioning policy:
+  * This should be done in final product (when to create version(s) automatically, likely a configuration parameter)
+  * Also during browsing: You may want to browse only zn un-mutable version of an image, for example
 * We don't really make usage of `editSessionToken` and `revisionId`
 * Locking is done per Fonto request. So, if the document was already locked and Fonto asks us to unlock it at some point, we do unlock it.
   * This will likely need to be optimized in the final product
