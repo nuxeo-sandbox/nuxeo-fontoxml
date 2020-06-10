@@ -31,7 +31,7 @@ nuxeo-fontoxml is a plugin allowing for editing XML files within Nuxeo, using th
 * See Fonto API, especially in its [Integrate with a CMS](https://documentation.fontoxml.com/editor/latest/integrate-with-a-cms-3099086.html) part.
 * Fonto is distributed as a static Single Page Application that must be served by Nuxeo (so, no CORS, user is already authenticated, etc.)
 * The Fonto distribution must have been built with the different schemas you plan to use: Contact FontoXML for this purpose, Nuxeo does not provide Fonto XML builds.
-* This also means **the Fonto Editor does not display all and every XML** files, even if well formatted and embedding its own DTD. You will still need a distribution of Font handling your specific schemas.
+* This also means **the Fonto Editor does not display all and every XML** files, even if well formatted and embedding its own DTD. You will still need a distribution of Fonto handling your specific schemas.
 
 _Note_: In our POC, we tested with a distribution that includes DITA capabilities.
 
@@ -60,7 +60,12 @@ nxserver
 ```
 
 ### Displaying Fonto in the UI
-For very quick test, we added an iFrame to the default nuxeo-file-view document, just adding:
+
+_Notice_: A full example using a nuxeoo-file-view-layout can be found in the "README-Files" folder of this GitHub repository. You can copy/paste its content in your Studio project. It displays the Fonto XML Editor if the current document holds an XML blob. Else, it displays the default Nuxeo Viewer.
+
+Here is a brief summary:
+
+We added an iFrame to the default nuxeo-file-view-layout document, just adding:
 
 ```
 <nuxeo-card>

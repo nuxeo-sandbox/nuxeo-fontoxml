@@ -1,0 +1,123 @@
+<!--
+Example of nuxeo-file-view-layout displaying Fonto XML Editor _or_ the default viewer
+depending on the content of the blob oif current document.
+-->
+<dom-module id="nuxeo-file-view-layout">
+
+  <template>
+    <style>
+      nuxeo-document-viewer {
+        @apply --paper-card;
+      }
+    </style>
+
+    <nuxeo-connection user="{{user}}"></nuxeo-connection>
+
+    <!-- XML doc => Fonto Editor -->
+    <template is="dom-if" if="[[_hasXML(document)]]">
+      <nuxeo-card>
+        <iframe id="fontoxml"
+                frameborder="0"
+                style="width: 100%;height:75vh;"
+                src=[[url]]>
+        </iframe>
+      </nuxeo-card>
+    </template>
+
+    <!-- Not and XML doc => Viewer -->
+    <template is="dom-if" if="[[!_hasXML(document)]]">
+      <nuxeo-document-viewer role="widget" document="[[document]]"></nuxeo-document-viewer>
+    </template>
+
+  </template>
+
+  <script>
+    Polymer({
+      is: 'nuxeo-file-view-layout',
+      behaviors: [Nuxeo.LayoutBehavior],
+      properties: {
+        document: {
+          type: Object,
+          observer: "_documentChanged"
+        },
+
+        user: {
+          type: Object,
+          observer: "_userChanged"
+        },
+
+        url: {
+          type: String,
+          value: ""
+        }
+      },
+
+      _userChanged: function(newUser, prevUser) {
+        if(newUser) {
+          this._getFontoXMLUrl();
+        }
+      },
+
+      _documentChanged: function(newDoc, prevDoc) {
+        if(newDoc) {
+          if(this._hasXML(newDoc)) {
+            this._getFontoXMLUrl();
+          } else {
+            this.url = "";
+          }
+        }
+      },
+
+      _getFontoXMLUrl: function() {
+        if(!this.document || !this.user) {
+          console.log("_getFontoXMLUrl: document or user not yet loaded")
+          return;
+        }
+        if(!this._hasXML(this.document)) {
+          console.log("_getFontoXMLUrl: Not an XML");
+        }
+        // See https://documentation.fontoxml.com/editor/latest/invocation-of-the-fonto-editor-30015537.html
+        let queryParams = {
+          "documentIds": [this.document.uid],
+          "cmsBaseUrl": "/nuxeo/fontoxml",
+          "user": {
+            "id": this.user.id,
+            "displayName": this._getUserName(this.user)
+          },
+          "editSessionToken": this.document.uid, // required not yet sure how to use it
+          "autosave": false,
+          "heartbeat": 60 // => must implement the GET /heartbeat endpoint
+        }
+        /* Other possible parameters:
+        requestTimeoutInSeconds
+        useEmbeddedMode
+        */
+        let url = "http://localhost:8080/nuxeo/ui/FontoXML?scope=" + JSON.stringify(queryParams);
+        //console.log(url);
+        url = encodeURI(url);
+        this.url = url;
+      },
+
+      _getUserName: function(user) {
+        if(!user) {
+          return "";
+        }
+
+        if(user.properties.firstName && user.properties.lastName) {
+          return user.properties.firstName + " " + user.properties.lastName;
+        }
+
+        return user.id;
+      },
+
+      _hasXML: function(doc) {
+        if(!doc || !doc.properties || !doc.properties["file:content"]) {
+          return false;
+        }
+
+        return doc.properties["file:content"]["mime-type"] === "text/xml";
+      }
+    });
+  </script>
+
+</dom-module>
