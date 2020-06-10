@@ -1,9 +1,13 @@
 # nuxeo-fontoxml
+[![Build Status](https://qa.nuxeo.org/jenkins/buildStatus/icon?job=Sandbox/sandbox_nuxeo-fontoxml-master)](https://qa.nuxeo.org/jenkins/job/Sandbox/job/sandbox_nuxeo-fontoxml-master/)
 
 ## About the Plugin
 nuxeo-fontoxml is a plugin allowing for editing XML files within Nuxeo, using the [FontoXML Editor](https://www.fontoxml.com).
 
-[![Build Status](https://qa.nuxeo.org/jenkins/buildStatus/icon?job=Sandbox/sandbox_nuxeo-fontoxml-master)](https://qa.nuxeo.org/jenkins/job/Sandbox/job/sandbox_nuxeo-fontoxml-master/)
+(Click the images for bigger display):
+
+<img src="https://github.com/nuxeo-sandbox/nuxeo-fontoxml/blob/master/README-Files/Nuxeo-Fonto-1.jpg" width="50%">
+<img src="https://github.com/nuxeo-sandbox/nuxeo-fontoxml/blob/master/README-Files/Nuxeo-Fonto-2.jpg" width="50%">
 
 
 ### WARNINGS
