@@ -24,7 +24,7 @@ nuxeo-fontoxml is a plugin allowing for editing XML files within Nuxeo, using th
   * [Displaying Fonto in the UI](#displaying-fonto-in-the-ui) 
   * [Tuning Log Info at Runtime](#tuning-log-info-at-runtime) 
 - [Features in the Context of this POC](#features-in-the-context-of-this-poc)
-- [Build](#build)
+- [Build-Installation](#build-Installation)
 - [Support](#support)
 - [Licensing](#licensing)
 - [About Nuxeo](#about-nuxeo)
@@ -172,7 +172,7 @@ Could not extract fulltext of file [...] org.nuxeo.ecm.core.convert.api.Conversi
 * . . .
  
 
-# Build
+# Build-Installation
 
 ```
 git clone https://github.com/nuxeo-fontoxml.git
@@ -180,6 +180,11 @@ cd nuxeo-fontoxml
 
 mvn clean install
 ```
+
+Installation:
+
+* From the public marketplace, just `./nuxeoctl mp-install -s nuxeo-fonto-xml-integration` (`-s` switch to allow for installing a snapshot version on a release Nuxeo server))
+* After building the plugin locally: `./nuxeoctl mp-install /path/to+nuxeo-fonto-xml/nuxeo-fontoxml-package/target/nuxeo-fontoxml-package-10.10-SNAPSHOT.zip`
 
 # Support
 
