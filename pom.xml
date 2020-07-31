@@ -7,7 +7,7 @@
     <version>10.10</version>
   </parent>
 
-  <groupId>nuxeo.frontoxml</groupId>
+  <groupId>nuxeo.fontoxml</groupId>
   <artifactId>nuxeo-fontoxml-parent</artifactId>
   <version>10.10-SNAPSHOT</version>
   <name>Nuxeo fontoxml parent</name>
@@ -77,12 +77,12 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>nuxeo.frontoxml</groupId>
+        <groupId>nuxeo.fontoxml</groupId>
         <artifactId>nuxeo-fontoxml-core</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>nuxeo.frontoxml</groupId>
+        <groupId>nuxeo.fontoxml</groupId>
         <artifactId>nuxeo-fontoxml-package</artifactId>
         <version>${project.version}</version>
       </dependency>
