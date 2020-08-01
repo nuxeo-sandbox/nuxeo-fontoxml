@@ -5,7 +5,7 @@
 
     <servlet>
       <servlet-name>Nuxeo FontoXML Servlet</servlet-name>
-      <servlet-class>nuxeo.fontoxml.servlet.FontoXMLServlet</servlet-class>
+      <servlet-class>com.nuxeo.fontoxml.servlet.FontoXMLServlet</servlet-class>
     </servlet>
     <servlet-mapping>
       <servlet-name>Nuxeo FontoXML Servlet</servlet-name>
