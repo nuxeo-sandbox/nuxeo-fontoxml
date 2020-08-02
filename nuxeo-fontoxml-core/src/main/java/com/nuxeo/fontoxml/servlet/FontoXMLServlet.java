@@ -70,14 +70,12 @@ public class FontoXMLServlet extends HttpServlet {
 
     private static final Log log = LogFactory.getLog(FontoXMLServlet.class);
 
-    public static final String MIME_TYPE_XML = "text/xml";
-
     /**
      * As it is a GET, we don't do anything at repository level, no change in the document,
      * not even a lock (which does modify data at database level)
      */
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    public void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         // String uri = req.getRequestURI();
 
         String path = req.getPathInfo();
@@ -105,7 +103,7 @@ public class FontoXMLServlet extends HttpServlet {
     }
 
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    public void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
         String path = req.getPathInfo();
         log.info("POST " + path);
@@ -136,7 +134,7 @@ public class FontoXMLServlet extends HttpServlet {
     }
 
     @Override
-    protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    public void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
         String path = req.getPathInfo();
         log.info("PUT " + path);
@@ -161,7 +159,7 @@ public class FontoXMLServlet extends HttpServlet {
      * Return the objects as expected by Fonto
      * This method must not modify the document (could be called in a GET)
      */
-    protected JSONObject getLockInfoForFonto(DocumentModel doc) throws JSONException {
+    public JSONObject getLockInfoForFonto(DocumentModel doc) throws JSONException {
 
         JSONObject lock = new JSONObject();
 
@@ -195,7 +193,7 @@ public class FontoXMLServlet extends HttpServlet {
      * This includes documents initially loaded, templates and documents for preview."
      */
     protected void handleGetDocument(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String context = req.getParameter(PARAM_CONTEXT);
+        //String context = req.getParameter(PARAM_CONTEXT);
         String docId = req.getParameter(PARAM_DOC_ID);
 
         String includeAdditionalDocuments = req.getParameter("includeAdditionalDocuments");
@@ -206,7 +204,7 @@ public class FontoXMLServlet extends HttpServlet {
 
         // We assume these parameters were passed and are correctly formated
         try {
-            JSONObject contextJson = new JSONObject(context);
+            //JSONObject contextJson = new JSONObject(context);
             // context contains editSessionToken and referrerDocumentId (optionals but context is always passed)
             try (CloseableCoreSession session = CoreInstance.openCoreSession(null)) {
                 DocumentRef docRef = new IdRef(docId);

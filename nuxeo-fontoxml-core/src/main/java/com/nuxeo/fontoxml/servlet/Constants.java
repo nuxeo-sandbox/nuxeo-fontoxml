@@ -19,11 +19,17 @@
 package com.nuxeo.fontoxml.servlet;
 
 /**
- * Centralize the names of parameters/properties/query parameters as provided/expected by Fonto
+ * Centralize misc. constants, including the names of parameters/properties/query parameters as provided/expected by
+ * Fonto
  * 
  * @since 10.10
  */
 public class Constants {
+
+    // If you chane this, also change in the the misc. resources
+    public static final String FONTO_PATH_NAME = "fontoxml";
+
+    public static final String MIME_TYPE_XML = "text/xml";
 
     // ========================================> END POINTS
     public static final String PATH_DOCUMENT = "/document";
@@ -70,36 +76,36 @@ public class Constants {
     public static final String PARAM_REVISION_ID = "revisionId";
 
     public static final String PARAM_METADATA = "metadata";
-    
+
     public static final String PARAM_PROPERTIES = "properties";
 
     public static final String PARAM_REQUEST = "request";
 
     public static final String PARAM_FILE = "file";
-    
+
     public static final String PARAM_TYPE = "type";
-    
+
     public static final String PARAM_FOLDER_ID = "folderId";
-    
+
     public static final String PARAM_LABEL = "label";
 
     // ========================================> TYPES
     public static final String FONTO_TYPE_DOCUMENT = "document";
-    
+
     public static final String FONTO_TYPE_FOLDER = "folder";
-    
+
     public static final String FONTO_TYPE_TEMPLATE = "document-template";
-    
+
     public static final String FONTO_TYPE_FILE = "file";
-    
+
     public static final String FONTO_TYPE_IMAGE = "image";
-    
+
     public static final String FONTO_TYPE_AUDIO = "audio";
-    
+
     public static final String FONTO_TYPE_VIDEO = "video";
-    
+
     public static final String FONTO_TYPE_LINK = "link";
-    
+
     public static final String FONTO_TYPE_UNKNOWN = "unknown";
 
 }
