@@ -26,12 +26,13 @@ package com.nuxeo.fontoxml.servlet;
  */
 public class Constants {
 
-    // If you chane this, also change in the the misc. resources
+ // ========================================> Misc. constants
+    // If you change this, also change in the the misc. resources
     public static final String FONTO_PATH_NAME = "fontoxml";
 
     public static final String MIME_TYPE_XML = "text/xml";
 
-    // ========================================> END POINTS
+    // ========================================> FONT END POINTS
     public static final String PATH_DOCUMENT = "/document";
 
     public static final String PATH_DOCUMENT_STATE = "/document/state";
@@ -46,7 +47,7 @@ public class Constants {
 
     public static final String PATH_ASSET_PREVIEW = "/asset/preview";
 
-    // ========================================> PROPERTIES/PARAMETERS/...
+    // ========================================> FONTO PROPERTIES/PARAMETERS/...
     public static final String PARAM_CONTEXT = "context";
 
     public static final String PARAM_DOC_ID = "documentId";
@@ -89,7 +90,7 @@ public class Constants {
 
     public static final String PARAM_LABEL = "label";
 
-    // ========================================> TYPES
+    // ========================================> FONTO TYPES
     public static final String FONTO_TYPE_DOCUMENT = "document";
 
     public static final String FONTO_TYPE_FOLDER = "folder";
@@ -107,5 +108,10 @@ public class Constants {
     public static final String FONTO_TYPE_LINK = "link";
 
     public static final String FONTO_TYPE_UNKNOWN = "unknown";
+
+    // ========================================> CUSTOM INFO SEND (in context, mainly)
+    public static final String DOC_TYPE = "type";
+
+    public static final String DOC_STATE = "state";
 
 }

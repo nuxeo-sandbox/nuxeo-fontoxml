@@ -209,7 +209,7 @@ public class FontoXMLServlet extends HttpServlet {
             try (CloseableCoreSession session = CoreInstance.openCoreSession(null)) {
                 DocumentRef docRef = new IdRef(docId);
                 if (!session.exists(docRef)) {
-                    log.warn("docId " + docId + " not found");
+                    log.warn("docId <" + docId + "> not found");
                     resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Document not found");
                     return;
                 }
@@ -249,8 +249,8 @@ public class FontoXMLServlet extends HttpServlet {
                 documentContext.put("lockInfo", lock);
                 // Let's add stuff "just in case" (to be removed from the final product, only put what's
                 // interesting)
-                documentContext.put("type", doc.getType());
-                documentContext.put("state", doc.getCurrentLifeCycleState());
+                documentContext.put(DOC_TYPE, doc.getType());
+                documentContext.put(DOC_STATE, doc.getCurrentLifeCycleState());
                 responseJson.put(PARAM_DOCUMENT_CONTEXT, documentContext);
                 // - Optional, revisionId
                 //   (unused in this POC)

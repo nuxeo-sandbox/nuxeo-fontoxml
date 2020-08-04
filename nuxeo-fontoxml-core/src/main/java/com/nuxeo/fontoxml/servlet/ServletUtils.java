@@ -51,7 +51,6 @@ public class ServletUtils {
         sendStringResponse(resp, HttpServletResponse.SC_OK, response);
     }
     
-    
     public static Blob createBlobFromPart(Part part) throws IOException {
         
         Blob b = null;
