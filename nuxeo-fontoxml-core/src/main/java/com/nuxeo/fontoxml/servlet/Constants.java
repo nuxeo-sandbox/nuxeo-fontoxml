@@ -31,6 +31,8 @@ public class Constants {
     public static final String FONTO_PATH_NAME = "fontoxml";
 
     public static final String MIME_TYPE_XML = "text/xml";
+    
+    public static final String EVENT_DOC_MODIFIED_BY_FONTOWML = "documentModifiedByFontoXML";
 
     // ========================================> FONT END POINTS
     public static final String PATH_DOCUMENT = "/document";

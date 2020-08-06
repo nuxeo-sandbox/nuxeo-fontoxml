@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<component name="nuxeo.fontoxml.test.postDocumentListener">
+
+  <extension target="org.nuxeo.ecm.core.event.EventServiceComponent" point="listener">
+    <listener name="postDocumentListener"
+      class="nuxeo.fontoxml.test.PostDocumentListener">
+        <event>documentModifiedByFontoXML</event>
+    </listener>
+  </extension>
+
+</component>

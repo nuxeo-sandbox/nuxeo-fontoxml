@@ -3,15 +3,18 @@ package nuxeo.fontoxml.test;
 import static com.nuxeo.fontoxml.servlet.Constants.DOC_TYPE;
 import static com.nuxeo.fontoxml.servlet.Constants.MIME_TYPE_XML;
 import static com.nuxeo.fontoxml.servlet.Constants.PARAM_CONTENT;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_CONTEXT;
 import static com.nuxeo.fontoxml.servlet.Constants.PARAM_DOCUMENT_CONTEXT;
 import static com.nuxeo.fontoxml.servlet.Constants.PARAM_DOC_ID;
 import static com.nuxeo.fontoxml.servlet.Constants.PARAM_LOCK;
 import static com.nuxeo.fontoxml.servlet.Constants.PARAM_LOCK_ACQUIRED;
 import static com.nuxeo.fontoxml.servlet.Constants.PARAM_LOCK_AVAILABLE;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_METADATA;
 import static com.nuxeo.fontoxml.servlet.Constants.PATH_DOCUMENT;
 import static com.nuxeo.fontoxml.servlet.Constants.PATH_HEARTBEAT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.verify;
 
@@ -43,7 +46,7 @@ import com.google.common.collect.ImmutableMap;
 @Features(PlatformFeature.class)
 @RepositoryConfig(init = DefaultRepositoryInit.class, cleanup = Granularity.METHOD)
 @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core")
-public class TestServlet extends MockedServlet{
+public class TestServlet extends MockedServlet {
 
     public static final String BASE_URL = "http://localhost";
 
@@ -86,9 +89,9 @@ public class TestServlet extends MockedServlet{
     public void shouldGetDocument() throws Exception {
 
         DocumentModel doc = createTestDoc(true, MIME_TYPE_XML);
-        
+
         Map<String, String> params = ImmutableMap.of(PARAM_DOC_ID, doc.getId());
-        run("GET", PATH_DOCUMENT, params, true);
+        run("GET", PATH_DOCUMENT, params, null, true);
 
         // Should test we have the correct blob...
         // Not very useful to build a JSON string and test it equals what was returned,
@@ -122,7 +125,7 @@ public class TestServlet extends MockedServlet{
 
     @Test
     public void testGetDocumentFailsWithDocNotFound() throws Exception {
-        
+
         Map<String, String> params = ImmutableMap.of(PARAM_DOC_ID, "not a valid UUID");
         run("GET", PATH_DOCUMENT, params);
 
@@ -134,7 +137,7 @@ public class TestServlet extends MockedServlet{
     public void testGetDocumentFailsWithNoBlob() throws Exception {
 
         DocumentModel doc = createTestDoc(false);
-        
+
         Map<String, String> params = ImmutableMap.of(PARAM_DOC_ID, doc.getId());
         run("GET", PATH_DOCUMENT, params);
 
@@ -146,11 +149,42 @@ public class TestServlet extends MockedServlet{
     public void testGetDocumentFailsWithNoXml() throws Exception {
 
         DocumentModel doc = createTestDoc(true, "text/plain");
-        
+
         Map<String, String> params = ImmutableMap.of(PARAM_DOC_ID, doc.getId());
         run("GET", PATH_DOCUMENT, params);
 
         verify(mockResponse).sendError(HttpServletResponse.SC_NOT_FOUND, "This document contains no XML");
+
+    }
+
+    @Test
+    @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core:postDocumentListener-contrib.xml")
+    public void shouldPutDocumentAndCallListener() throws Exception {
+
+        DocumentModel doc = createTestDoc(true, MIME_TYPE_XML);
+
+        // See PUT /document. Several parameters are expected in the body, even if not handled
+        JSONObject body = new JSONObject();
+        body.put(PARAM_CONTEXT, new JSONObject());
+        body.put(PARAM_DOC_ID, doc.getId());
+        body.put(PARAM_DOCUMENT_CONTEXT, new JSONObject());
+        body.put(PARAM_METADATA, new JSONObject());
+        // What we test:
+        body.put(PARAM_CONTENT, "NEW XML CONTENT");
+        run("PUT", PATH_DOCUMENT, null, body.toString(), true);
+
+        verify(mockResponse).setStatus(HttpServletResponse.SC_OK);
+
+        // Check the doc
+        doc.refresh();
+        Blob blob = (Blob) doc.getPropertyValue("file:content");
+        assertNotNull(blob);
+        String xml = blob.getString();
+        assertEquals("NEW XML CONTENT", xml);
+
+        // Check the listener was called
+        String desc = (String) doc.getPropertyValue("dc:description");
+        assertEquals("OK", desc);
 
     }
 

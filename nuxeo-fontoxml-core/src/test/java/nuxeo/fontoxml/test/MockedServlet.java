@@ -3,8 +3,10 @@ package nuxeo.fontoxml.test;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
+import java.io.StringReader;
 import java.util.Map;
 
 import javax.servlet.ServletOutputStream;
@@ -35,7 +37,7 @@ public class MockedServlet {
     
     protected ServletOutputStream sos;
     
-    protected void run(String httpVerb, String pathInfo, Map<String, String> params, boolean withOutStream) throws Exception {
+    protected void run(String httpVerb, String pathInfo, Map<String, String> params, String body, boolean withOutStream) throws Exception {
 
         // Prepare mock request
         mockRequest = mock(HttpServletRequest.class);
@@ -46,6 +48,14 @@ public class MockedServlet {
                 when(mockRequest.getParameter(k)).thenReturn(v);
             });
         }
+        
+        if(body == null) {
+            body = "";
+        }
+        StringReader sr = new StringReader(body);
+        BufferedReader buffReader = new BufferedReader(sr);
+        when(mockRequest.getReader()).thenReturn(buffReader);
+        
         // Prepare mock response
         mockResponse = mock(HttpServletResponse.class);
         if (withOutStream) {
@@ -72,15 +82,27 @@ public class MockedServlet {
         }
 
         // Call the service
-        (new FontoXMLServlet()).doGet(mockRequest, mockResponse);
+        switch(httpVerb) {
+        case "GET":
+            (new FontoXMLServlet()).doGet(mockRequest, mockResponse);
+            break;
+            
+        case "POST":
+            (new FontoXMLServlet()).doPost(mockRequest, mockResponse);
+            break;
+            
+        case "PUT":
+            (new FontoXMLServlet()).doPut(mockRequest, mockResponse);
+            break;
+        }
     }
     
     protected void run(String httpVerb, String pathInfo, Map<String, String> params) throws Exception {
-        run(httpVerb, pathInfo, params, false);
+        run(httpVerb, pathInfo, params, null, false);
     }
     
     protected void run(String httpVerb, String pathInfo) throws Exception {
-        run(httpVerb, pathInfo, null, false);
+        run(httpVerb, pathInfo, null, null, false);
     }
     
 

@@ -20,9 +20,10 @@ nuxeo-fontoxml is a plugin allowing for editing XML files within Nuxeo, using th
 # Table of Content
 - [About the Integration - Requirements](#about-the-integration-requirements)
 - [Deployment - Displaying Fonto in the UI](#deployment-displaying-fonto-in-the-ui)
-  * [Deployment of Fonto](#deployment-of-fonto) 
-  * [Displaying Fonto in the UI](#displaying-fonto-in-the-ui) 
-  * [Tuning Log Info at Runtime](#tuning-log-info-at-runtime) 
+  * [Deployment of Fonto](#deployment-of-fonto)
+  * [Displaying Fonto in the UI](#displaying-fonto-in-the-ui)
+  * [Adding Logic with an Event Handler](#adding-logic-with-an-event-handler)
+  * [Tuning Log Info at Runtime](#tuning-log-info-at-runtime)
 - [Features in the Context of this POC](#features-in-the-context-of-this-poc)
 - [Build-Installation](#build-Installation)
 - [Support](#support)
@@ -101,7 +102,7 @@ let queryParams = {
 requestTimeoutInSeconds
 useEmbeddedMode
 */
-let url = "http://localhost:8080/nuxeo/ui/FontoXML?scope=" + JSON.stringify(queryParams);
+let url = window.location.origin + "/nuxeo/ui/FontoXML?scope=" + JSON.stringify(queryParams);
 url = encodeURI(url);
 this.url = url;
  • • •
@@ -112,6 +113,16 @@ this.url = url;
 * In our testing, we set `autoSave` to `false` when initializing the Fonto Editor. `auytoSave`, when `true`, sends a request 2 seconds after each edit.
   * Fonto allows for detecting it's "auto save" so we can optimize the database load, maybe, but still. Saving every n seconds does not really scale. => In this POC it will work, because you usually test a POC on very few documents :-)
   * This POC always save when requested to do so
+
+### Adding Logic with an Event Handler
+Every time the document is saved in the repository (either because you set the `autoSave` option to `true` or because the user clicked the "Save" button in the Fonto UI), the plugin fires the `documentModifiedByFontoXML` event.
+
+You can catch this event and add more logic if you need to do so:
+
+* Either use a [Java Listener](https://doc.nuxeo.com/nxdoc/events-and-messages/)
+* Or use an [Event Handler](https://doc.nuxeo.com/studio/event-handlers/) (using Automation) with Studio:
+  * Add the "documentModifiedByFontoXML" event to Studio registry
+  * Create an Event Handler that listens to this event and runs an Automation chain (regular or JavaScript automation).
 
 ### Tuning Log Info at Runtime
 The plugin writes some warnings in server.log when needed. For more informations you can activate the info level in the Log4j configuration. This will log more details (like the request received, the parameters, etc.). In order to do so:

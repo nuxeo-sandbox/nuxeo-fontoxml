@@ -18,7 +18,44 @@
  */
 package com.nuxeo.fontoxml.servlet;
 
-import static com.nuxeo.fontoxml.servlet.Constants.*;
+import static com.nuxeo.fontoxml.servlet.Constants.DOC_STATE;
+import static com.nuxeo.fontoxml.servlet.Constants.DOC_TYPE;
+import static com.nuxeo.fontoxml.servlet.Constants.EVENT_DOC_MODIFIED_BY_FONTOWML;
+import static com.nuxeo.fontoxml.servlet.Constants.FONTO_TYPE_AUDIO;
+import static com.nuxeo.fontoxml.servlet.Constants.FONTO_TYPE_DOCUMENT;
+import static com.nuxeo.fontoxml.servlet.Constants.FONTO_TYPE_FILE;
+import static com.nuxeo.fontoxml.servlet.Constants.FONTO_TYPE_FOLDER;
+import static com.nuxeo.fontoxml.servlet.Constants.FONTO_TYPE_IMAGE;
+import static com.nuxeo.fontoxml.servlet.Constants.FONTO_TYPE_UNKNOWN;
+import static com.nuxeo.fontoxml.servlet.Constants.FONTO_TYPE_VIDEO;
+import static com.nuxeo.fontoxml.servlet.Constants.MIME_TYPE_XML;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_AUTOSAVE;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_BODY;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_CONTENT;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_CONTEXT;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_DOCUMENTS;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_DOCUMENT_CONTEXT;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_DOC_ID;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_FILE;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_FOLDER_ID;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_ID;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_LABEL;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_LOCK;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_LOCK_ACQUIRED;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_LOCK_AVAILABLE;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_LOCK_REASON;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_METADATA;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_REQUEST;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_REVISION_ID;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_TYPE;
+import static com.nuxeo.fontoxml.servlet.Constants.PARAM_VARIANT;
+import static com.nuxeo.fontoxml.servlet.Constants.PATH_ASSET;
+import static com.nuxeo.fontoxml.servlet.Constants.PATH_ASSET_PREVIEW;
+import static com.nuxeo.fontoxml.servlet.Constants.PATH_BROWSE;
+import static com.nuxeo.fontoxml.servlet.Constants.PATH_DOCUMENT;
+import static com.nuxeo.fontoxml.servlet.Constants.PATH_DOCUMENT_LOCK;
+import static com.nuxeo.fontoxml.servlet.Constants.PATH_DOCUMENT_STATE;
+import static com.nuxeo.fontoxml.servlet.Constants.PATH_HEARTBEAT;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -49,6 +86,9 @@ import org.nuxeo.ecm.core.api.LockException;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.api.impl.blob.StringBlob;
 import org.nuxeo.ecm.core.api.thumbnail.ThumbnailService;
+import org.nuxeo.ecm.core.event.Event;
+import org.nuxeo.ecm.core.event.EventService;
+import org.nuxeo.ecm.core.event.impl.DocumentEventContext;
 import org.nuxeo.ecm.platform.filemanager.api.FileImporterContext;
 import org.nuxeo.ecm.platform.filemanager.api.FileManager;
 import org.nuxeo.ecm.platform.picture.api.ImageInfo;
@@ -193,7 +233,7 @@ public class FontoXMLServlet extends HttpServlet {
      * This includes documents initially loaded, templates and documents for preview."
      */
     protected void handleGetDocument(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        //String context = req.getParameter(PARAM_CONTEXT);
+        // String context = req.getParameter(PARAM_CONTEXT);
         String docId = req.getParameter(PARAM_DOC_ID);
 
         String includeAdditionalDocuments = req.getParameter("includeAdditionalDocuments");
@@ -204,7 +244,7 @@ public class FontoXMLServlet extends HttpServlet {
 
         // We assume these parameters were passed and are correctly formated
         try {
-            //JSONObject contextJson = new JSONObject(context);
+            // JSONObject contextJson = new JSONObject(context);
             // context contains editSessionToken and referrerDocumentId (optionals but context is always passed)
             try (CloseableCoreSession session = CoreInstance.openCoreSession(null)) {
                 DocumentRef docRef = new IdRef(docId);
@@ -536,6 +576,12 @@ public class FontoXMLServlet extends HttpServlet {
                     doc.setPropertyValue("file:content", (Serializable) newBlob);
                     doc = session.saveDocument(doc);
                     session.save();
+
+                    // Raise an event so configuration can add some logic
+                    DocumentEventContext eventCtx = new DocumentEventContext(session, session.getPrincipal(), doc);
+                    Event eventToSend = eventCtx.newEvent(EVENT_DOC_MODIFIED_BY_FONTOWML);
+                    Framework.getService(EventService.class).fireEvent(eventToSend);
+
                     // We should return 200 only if the documentContext has changed,
                     // 204 if not.
                     // In the context of the POC we do it quickly and always return it if we had one
