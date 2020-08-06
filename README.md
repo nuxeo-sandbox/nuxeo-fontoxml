@@ -115,7 +115,10 @@ this.url = url;
   * This POC always save when requested to do so
 
 ### Adding Logic with an Event Handler
-Every time the document is saved in the repository (either because you set the `autoSave` option to `true` or because the user clicked the "Save" button in the Fonto UI), the plugin fires the `documentModifiedByFontoXML` event.
+Every time the document is saved in the repository (either because you set the `autoSave` option to `true` or because the user clicked the "Save" button in the Fonto UI), the plugin:
+
+* Fires the `documentModifiedByFontoXML` event.
+* Adds the `isFontoAutoSave` (boolean, true/false) property in the document context (accessible via the `DopcumentModel#putContextData` API)
 
 You can catch this event and add more logic if you need to do so:
 
@@ -123,6 +126,7 @@ You can catch this event and add more logic if you need to do so:
 * Or use an [Event Handler](https://doc.nuxeo.com/studio/event-handlers/) (using Automation) with Studio:
   * Add the "documentModifiedByFontoXML" event to Studio registry
   * Create an Event Handler that listens to this event and runs an Automation chain (regular or JavaScript automation).
+  * Notice: In automation, the input will be the document. If you want to check the autosave flag, in Automation Scriptin you can check `if(input.getDoc().getContextData("isFontoAutoSave"))) ...`
 
 ### Tuning Log Info at Runtime
 The plugin writes some warnings in server.log when needed. For more informations you can activate the info level in the Log4j configuration. This will log more details (like the request received, the parameters, etc.). In order to do so:

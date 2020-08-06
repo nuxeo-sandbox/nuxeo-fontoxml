@@ -33,6 +33,8 @@ public class Constants {
     public static final String MIME_TYPE_XML = "text/xml";
     
     public static final String EVENT_DOC_MODIFIED_BY_FONTOWML = "documentModifiedByFontoXML";
+    
+    public static final String EVENT_CONTEXT_IS_AUTOSAVE = "isFontoAutoSave";
 
     // ========================================> FONT END POINTS
     public static final String PATH_DOCUMENT = "/document";
