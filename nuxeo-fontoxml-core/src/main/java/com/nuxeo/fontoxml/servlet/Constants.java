@@ -93,6 +93,10 @@ public class Constants {
     public static final String PARAM_FOLDER_ID = "folderId";
 
     public static final String PARAM_LABEL = "label";
+    
+    public static final String VARIANT_THUMBNAIL = "thumbnail";
+    
+    public static final String VARIANT_WEB = "web";
 
     // ========================================> FONTO TYPES
     public static final String FONTO_TYPE_DOCUMENT = "document";

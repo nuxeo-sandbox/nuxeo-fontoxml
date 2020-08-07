@@ -1,17 +1,6 @@
 package nuxeo.fontoxml.test;
 
-import static com.nuxeo.fontoxml.servlet.Constants.DOC_TYPE;
-import static com.nuxeo.fontoxml.servlet.Constants.MIME_TYPE_XML;
-import static com.nuxeo.fontoxml.servlet.Constants.PARAM_CONTENT;
-import static com.nuxeo.fontoxml.servlet.Constants.PARAM_CONTEXT;
-import static com.nuxeo.fontoxml.servlet.Constants.PARAM_DOCUMENT_CONTEXT;
-import static com.nuxeo.fontoxml.servlet.Constants.PARAM_DOC_ID;
-import static com.nuxeo.fontoxml.servlet.Constants.PARAM_LOCK;
-import static com.nuxeo.fontoxml.servlet.Constants.PARAM_LOCK_ACQUIRED;
-import static com.nuxeo.fontoxml.servlet.Constants.PARAM_LOCK_AVAILABLE;
-import static com.nuxeo.fontoxml.servlet.Constants.PARAM_METADATA;
-import static com.nuxeo.fontoxml.servlet.Constants.PATH_DOCUMENT;
-import static com.nuxeo.fontoxml.servlet.Constants.PATH_HEARTBEAT;
+import com.nuxeo.fontoxml.servlet.Constants;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -19,12 +8,14 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.verify;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Map;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
 
 import org.json.JSONObject;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.ecm.core.api.Blob;
@@ -80,7 +71,7 @@ public class TestServlet extends MockedServlet {
     @Test
     public void testHeartbeat() throws Exception {
 
-        run("GET", PATH_HEARTBEAT);
+        run("GET", Constants.PATH_HEARTBEAT);
 
         verify(mockResponse).setStatus(HttpServletResponse.SC_OK);
     }
@@ -88,10 +79,10 @@ public class TestServlet extends MockedServlet {
     @Test
     public void shouldGetDocument() throws Exception {
 
-        DocumentModel doc = createTestDoc(true, MIME_TYPE_XML);
+        DocumentModel doc = createTestDoc(true, Constants.MIME_TYPE_XML);
 
-        Map<String, String> params = ImmutableMap.of(PARAM_DOC_ID, doc.getId());
-        run("GET", PATH_DOCUMENT, params, null, true);
+        Map<String, String> params = ImmutableMap.of(Constants.PARAM_DOC_ID, doc.getId());
+        run("GET", Constants.PATH_DOCUMENT, params, null, true);
 
         // Should test we have the correct blob...
         // Not very useful to build a JSON string and test it equals what was returned,
@@ -105,29 +96,29 @@ public class TestServlet extends MockedServlet {
         String resultStr = responseOutputStream.toString();
         JSONObject json = new JSONObject(resultStr);
         // We have the doc id
-        String docId = json.getString(PARAM_DOC_ID);
+        String docId = json.getString(Constants.PARAM_DOC_ID);
         assertEquals(doc.getId(), docId);
 
         // We have the xml
-        String xml = json.getString(PARAM_CONTENT);
+        String xml = json.getString(Constants.PARAM_CONTENT);
         assertEquals(PSEUDO_XML_CONTENT, xml);
 
         // More info we should have
         // Document is not locked and can be locked
-        JSONObject lock = json.getJSONObject(PARAM_LOCK);
-        assertFalse(lock.getBoolean(PARAM_LOCK_ACQUIRED));
-        assertTrue(lock.getBoolean(PARAM_LOCK_AVAILABLE));
+        JSONObject lock = json.getJSONObject(Constants.PARAM_LOCK);
+        assertFalse(lock.getBoolean(Constants.PARAM_LOCK_ACQUIRED));
+        assertTrue(lock.getBoolean(Constants.PARAM_LOCK_AVAILABLE));
         // The context we always send to the frontend
-        JSONObject context = json.getJSONObject(PARAM_DOCUMENT_CONTEXT);
-        assertEquals("File", context.getString(DOC_TYPE));
+        JSONObject context = json.getJSONObject(Constants.PARAM_DOCUMENT_CONTEXT);
+        assertEquals("File", context.getString(Constants.DOC_TYPE));
 
     }
 
     @Test
     public void testGetDocumentFailsWithDocNotFound() throws Exception {
 
-        Map<String, String> params = ImmutableMap.of(PARAM_DOC_ID, "not a valid UUID");
-        run("GET", PATH_DOCUMENT, params);
+        Map<String, String> params = ImmutableMap.of(Constants.PARAM_DOC_ID, "not a valid UUID");
+        run("GET", Constants.PATH_DOCUMENT, params);
 
         verify(mockResponse).sendError(HttpServletResponse.SC_NOT_FOUND, "Document not found");
 
@@ -138,8 +129,8 @@ public class TestServlet extends MockedServlet {
 
         DocumentModel doc = createTestDoc(false);
 
-        Map<String, String> params = ImmutableMap.of(PARAM_DOC_ID, doc.getId());
-        run("GET", PATH_DOCUMENT, params);
+        Map<String, String> params = ImmutableMap.of(Constants.PARAM_DOC_ID, doc.getId());
+        run("GET", Constants.PATH_DOCUMENT, params);
 
         verify(mockResponse).sendError(HttpServletResponse.SC_NOT_FOUND, "This document has no blob");
 
@@ -150,28 +141,55 @@ public class TestServlet extends MockedServlet {
 
         DocumentModel doc = createTestDoc(true, "text/plain");
 
-        Map<String, String> params = ImmutableMap.of(PARAM_DOC_ID, doc.getId());
-        run("GET", PATH_DOCUMENT, params);
+        Map<String, String> params = ImmutableMap.of(Constants.PARAM_DOC_ID, doc.getId());
+        run("GET", Constants.PATH_DOCUMENT, params);
 
         verify(mockResponse).sendError(HttpServletResponse.SC_NOT_FOUND, "This document contains no XML");
 
+    }
+
+    /*
+     * Not finished.
+     * TODO Deploy thumbnail and imaging, wait for things to be calculated etc.
+     * _or_ deploy a custom thumbnail factory that returns a hard coded
+     * value
+     */
+    @Ignore
+    @Test
+    public void shouldGetAssetPreviex() throws Exception {
+
+        // We test with the xml file but it's like any blob, so it's ok
+        DocumentModel doc = createTestDoc(true, "text/plain");
+
+        // See GET /preview. Several parameters are expected in the body, even if not handled
+        JSONObject context = new JSONObject();
+        context.put(Constants.PARAM_DOC_ID, doc.getId());
+
+        Map<String, String> params = new HashMap<String, String>();
+        params.put(Constants.PARAM_CONTEXT, context.toString());
+        params.put(Constants.PARAM_ID, doc.getId());// Using same doc to get the blob
+        params.put(Constants.PARAM_VARIANT, Constants.VARIANT_THUMBNAIL);
+
+        run("GET", Constants.PATH_ASSET_PREVIEW, params, null, true);
+
+        verify(mockResponse).setStatus(HttpServletResponse.SC_OK);
     }
 
     @Test
     @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core:postDocumentListener-contrib.xml")
     public void shouldPutDocumentAndCallListener() throws Exception {
 
-        DocumentModel doc = createTestDoc(true, MIME_TYPE_XML);
+        DocumentModel doc = createTestDoc(true, Constants.MIME_TYPE_XML);
 
         // See PUT /document. Several parameters are expected in the body, even if not handled
         JSONObject body = new JSONObject();
-        body.put(PARAM_CONTEXT, new JSONObject());
-        body.put(PARAM_DOC_ID, doc.getId());
-        body.put(PARAM_DOCUMENT_CONTEXT, new JSONObject());
-        body.put(PARAM_METADATA, new JSONObject());
+        body.put(Constants.PARAM_CONTEXT, new JSONObject());
+        body.put(Constants.PARAM_DOC_ID, doc.getId());
+        body.put(Constants.PARAM_DOCUMENT_CONTEXT, new JSONObject());
+        body.put(Constants.PARAM_METADATA, new JSONObject());
         // What we test:
-        body.put(PARAM_CONTENT, "NEW XML CONTENT");
-        run("PUT", PATH_DOCUMENT, null, body.toString(), true);
+        body.put(Constants.PARAM_CONTENT, "NEW XML CONTENT");
+        run("PUT", Constants.PATH_DOCUMENT, null, body.toString(), true);
 
         verify(mockResponse).setStatus(HttpServletResponse.SC_OK);
 

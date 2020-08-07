@@ -293,7 +293,7 @@ public class FontoXMLServlet extends HttpServlet {
         log.info("variant: " + variant);
         try {
             JSONObject contextJson = new JSONObject(context);
-            String mainDocId = contextJson.getString("documentId");
+            String mainDocId = contextJson.getString(PARAM_DOC_ID);
             try (CloseableCoreSession session = CoreInstance.openCoreSession(null)) {
                 DocumentRef assetDocRef = new IdRef(assetId);
                 if (!session.exists(assetDocRef)) {
@@ -329,14 +329,14 @@ public class FontoXMLServlet extends HttpServlet {
                 ImageInfo imageInfo = imagingService.getImageInfo(thumbnail);
                 log.info("Thumbnail size: " + imageInfo.getWidth() + "x" + imageInfo.getHeight());
                 switch (variant) {
-                case "thumbnail":
+                case VARIANT_THUMBNAIL:
                     if (imageInfo.getWidth() != 128 || imageInfo.getHeight() != 128) {
                         log.info("RESIZING TO 128x128");
                         thumbnail = imagingService.resize(thumbnail, imageInfo.getFormat(), 128, 128, -1);
                     }
                     break;
 
-                case "web":
+                case VARIANT_WEB:
                     if (imageInfo.getWidth() > 1024 || imageInfo.getHeight() > 1024) {
                         log.info("RESIZING TO max 1024x1024");
                         thumbnail = imagingService.resize(thumbnail, imageInfo.getFormat(), 1024, 1024, -1);
