@@ -584,7 +584,7 @@ public class FontoXMLServlet extends HttpServlet {
             JSONObject bodyJson = new JSONObject(body);
             try (CloseableCoreSession session = CoreInstance.openCoreSession(null)) {
                 JSONObject context = bodyJson.getJSONObject(PARAM_CONTEXT);
-                String docId = bodyJson.getString("documentId");
+                String docId = bodyJson.getString(PARAM_DOC_ID);
                 JSONObject lock = bodyJson.getJSONObject(PARAM_LOCK);
                 boolean acquireLock = lock.getBoolean(PARAM_LOCK_ACQUIRED);
                 String revisionId = bodyJson.optString(PARAM_REVISION_ID, null);
