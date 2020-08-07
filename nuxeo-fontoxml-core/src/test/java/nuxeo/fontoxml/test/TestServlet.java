@@ -1,6 +1,10 @@
 package nuxeo.fontoxml.test;
 
 import com.nuxeo.fontoxml.servlet.Constants;
+
+import nuxeo.fontoxml.test.utils.MockedServlet;
+import nuxeo.fontoxml.test.utils.TestMockersAndFakers;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -15,17 +19,20 @@ import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
 
 import org.json.JSONObject;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.nuxeo.ecm.automation.test.AutomationFeature;
 import org.nuxeo.ecm.core.api.Blob;
+import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.impl.blob.StringBlob;
 import org.nuxeo.ecm.core.test.DefaultRepositoryInit;
 import org.nuxeo.ecm.core.test.annotations.Granularity;
 import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
-import org.nuxeo.ecm.platform.test.PlatformFeature;
+import org.nuxeo.ecm.platform.picture.api.ImageInfo;
+import org.nuxeo.ecm.platform.picture.api.ImagingService;
+import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -34,7 +41,7 @@ import org.nuxeo.runtime.transaction.TransactionHelper;
 import com.google.common.collect.ImmutableMap;
 
 @RunWith(FeaturesRunner.class)
-@Features(PlatformFeature.class)
+@Features(AutomationFeature.class)
 @RepositoryConfig(init = DefaultRepositoryInit.class, cleanup = Granularity.METHOD)
 @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core")
 public class TestServlet extends MockedServlet {
@@ -148,17 +155,17 @@ public class TestServlet extends MockedServlet {
 
     }
 
-    /*
-     * Not finished.
-     * TODO Deploy thumbnail and imaging, wait for things to be calculated etc.
-     * _or_ deploy a custom thumbnail factory that returns a hard coded
-     * value
-     */
-    @Ignore
     @Test
-    public void shouldGetAssetPreviex() throws Exception {
+    @Deploy("org.nuxeo.ecm.platform.picture.api")
+    @Deploy("org.nuxeo.ecm.platform.picture.core")
+    @Deploy("org.nuxeo.ecm.platform.picture.convert")
+    @Deploy("org.nuxeo.ecm.platform.tag")
+    @Deploy("org.nuxeo.ecm.platform.thumbnail")
+    @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core:thumbnail-factory.xml")
+    public void shouldGetAssetPreview() throws Exception {
 
-        // We test with the xml file but it's like any blob, so it's ok
+        // We test with the xml file. The code gets the thumbnail and the test
+        // provides one so it's fine
         DocumentModel doc = createTestDoc(true, "text/plain");
 
         // See GET /preview. Several parameters are expected in the body, even if not handled
@@ -173,10 +180,18 @@ public class TestServlet extends MockedServlet {
         run("GET", Constants.PATH_ASSET_PREVIEW, params, null, true);
 
         verify(mockResponse).setStatus(HttpServletResponse.SC_OK);
+        verify(mockResponse).setContentType(TestMockersAndFakers.THUMBNAIL_MIMETYPE);
+        // We asked for a thumbnail, size must be exactly 128 max
+        Blob image = Blobs.createBlob(responseOutputStream.toByteArray(), TestMockersAndFakers.THUMBNAIL_MIMETYPE);
+        ImagingService imagingService = Framework.getService(ImagingService.class);
+        ImageInfo imageInfo = imagingService.getImageInfo(image);
+        assertTrue(imageInfo.getWidth() <= 128);
+        assertTrue(imageInfo.getHeight() <= 128);
+        
     }
 
     @Test
-    @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core:postDocumentListener-contrib.xml")
+    @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core:listener-docModifiedByFonto.xml")
     public void shouldPutDocumentAndCallListener() throws Exception {
 
         DocumentModel doc = createTestDoc(true, Constants.MIME_TYPE_XML);

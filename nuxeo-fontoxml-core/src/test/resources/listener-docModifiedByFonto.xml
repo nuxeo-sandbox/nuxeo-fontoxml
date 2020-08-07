@@ -3,7 +3,7 @@
 
   <extension target="org.nuxeo.ecm.core.event.EventServiceComponent" point="listener">
     <listener name="postDocumentListener"
-      class="nuxeo.fontoxml.test.PostDocumentListener">
+      class="nuxeo.fontoxml.test.utils.TestMockersAndFakers">
         <event>documentModifiedByFontoXML</event>
     </listener>
   </extension>

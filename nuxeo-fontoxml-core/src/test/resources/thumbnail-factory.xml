@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<component name="nuxeo.fontoxml.test.thumbnailFactory">
+
+  <extension target="org.nuxeo.ecm.core.api.thumbnail.ThumbnailService" point="thumbnailFactory">
+    <thumbnailFactory name="fakeThumbnail"
+      factoryClass="nuxeo.fontoxml.test.utils.TestMockersAndFakers" />
+  </extension>
+
+</component>

@@ -1,4 +1,4 @@
-package nuxeo.fontoxml.test;
+package nuxeo.fontoxml.test.utils;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;

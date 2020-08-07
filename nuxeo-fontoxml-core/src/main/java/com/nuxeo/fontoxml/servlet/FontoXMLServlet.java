@@ -328,11 +328,13 @@ public class FontoXMLServlet extends HttpServlet {
                 ImagingService imagingService = Framework.getService(ImagingService.class);
                 ImageInfo imageInfo = imagingService.getImageInfo(thumbnail);
                 log.info("Thumbnail size: " + imageInfo.getWidth() + "x" + imageInfo.getHeight());
+                String thumbnailMimeType = thumbnail.getMimeType();
                 switch (variant) {
                 case VARIANT_THUMBNAIL:
                     if (imageInfo.getWidth() != 128 || imageInfo.getHeight() != 128) {
                         log.info("RESIZING TO 128x128");
                         thumbnail = imagingService.resize(thumbnail, imageInfo.getFormat(), 128, 128, -1);
+                        thumbnail.setMimeType(thumbnailMimeType);
                     }
                     break;
 
@@ -340,6 +342,7 @@ public class FontoXMLServlet extends HttpServlet {
                     if (imageInfo.getWidth() > 1024 || imageInfo.getHeight() > 1024) {
                         log.info("RESIZING TO max 1024x1024");
                         thumbnail = imagingService.resize(thumbnail, imageInfo.getFormat(), 1024, 1024, -1);
+                        thumbnail.setMimeType(thumbnailMimeType);
                     }
                     break;
 
