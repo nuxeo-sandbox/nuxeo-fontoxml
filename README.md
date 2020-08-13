@@ -2,17 +2,23 @@
 [![Build Status](https://qa.nuxeo.org/jenkins/buildStatus/icon?job=Sandbox/sandbox_nuxeo-fontoxml-master)](https://qa.nuxeo.org/jenkins/job/Sandbox/job/sandbox_nuxeo-fontoxml-master/)
 
 
-**WARNING: This documentation must be updated to describe the service configuration**. When Fonto calls `GET /asset`, it is possible to return a blob evaluated by configuration (not hard coded). In short:
+# Table of Content
+- [About nuxeo-fontoxml](about-nuxeo-fontoxml)
+- [About the Integration - Requirements](#about-the-integration-requirements)
+- [Deployment - Displaying Fonto in the UI](#deployment-displaying-fonto-in-the-ui)
+  * [Deployment of Fonto](#deployment-of-fonto)
+  * [Displaying Fonto in the UI](#displaying-fonto-in-the-ui)
+  * [Adding Logic with an Event Handler](#adding-logic-with-an-event-handler)
+  * [Tuning Log Info at Runtime](#tuning-log-info-at-runtime)
+- [Configuration](configuration)
+- [Features in the Context of this POC](#features-in-the-context-of-this-poc)
+- [Build-Installation](#build-Installation)
+- [Support](#support)
+- [Licensing](#licensing)
+- [About Nuxeo](#about-nuxeo)
 
-* Returned by an Automation Chain that is called back by the service
-* If there is no chain or it returned `null`, we use a rendition named
-* If there is no rendition name or no rendition of this name in picture:views, we use an xpath
-* If there is no such schema or this xpath is null, we give up and return `file:content`
-
-See fontoxmlservice-service.xml.
-
-
-## About the Plugin
+<a name="about-nuxeo-fontoxml"></a>
+## About nuxeo-fontoxml
 nuxeo-fontoxml is a plugin allowing for editing XML files within Nuxeo, using the [FontoXML Editor](https://www.fontoxml.com).
 
 (Click the images for bigger display):
@@ -26,20 +32,6 @@ nuxeo-fontoxml is a plugin allowing for editing XML files within Nuxeo, using th
 * This plugin is a **Proof of Concept** (POC), it is not a final product. We want to show Nuxeo can integrate the Fonto XML Editor and interact with it. As a POC it does not handle all and every features a final product will have (see below for more details).
 
 * Also (see below) you need to deploy your custom distribution of Fonto in order to display your XML files
-
-
-# Table of Content
-- [About the Integration - Requirements](#about-the-integration-requirements)
-- [Deployment - Displaying Fonto in the UI](#deployment-displaying-fonto-in-the-ui)
-  * [Deployment of Fonto](#deployment-of-fonto)
-  * [Displaying Fonto in the UI](#displaying-fonto-in-the-ui)
-  * [Adding Logic with an Event Handler](#adding-logic-with-an-event-handler)
-  * [Tuning Log Info at Runtime](#tuning-log-info-at-runtime)
-- [Features in the Context of this POC](#features-in-the-context-of-this-poc)
-- [Build-Installation](#build-Installation)
-- [Support](#support)
-- [Licensing](#licensing)
-- [About Nuxeo](#about-nuxeo)
 
 
 <a name="about-the-integration-requirements"></a>
@@ -154,12 +146,77 @@ The plugin writes some warnings in server.log when needed. For more informations
 * No need to restart the server, changes in `log4j2.xml` are handled dynamically
 * Which means, you also can change the `level` back to `"warn"` when you don't need the info anymore (no need to restart Nuxeo)
 
+## Configuration
+
+When Fonto calls `GET /asset`, it is possible to return a blob evaluated by configuration (not hard coded in the plugin).
+
+An XML contribution can be added to dynamically decide which blob to return:
+
+* It can be returned by an Automation Chain that is called back by the service
+* If there is no chain defined, or it returned `null`, we use the name of a rendition
+* If there is no rendition name defined, or no rendition of this name in `picture:views`, we use an xpath
+* If there is no xpath defined, or if the blob at this xpath is null, we give up and return `file:content`
+
+To contribute the service, create a new XML contribution in Studio, and paste/adapt the following, which is the default contribution:
+
+```
+<extension target="com.nuxeo.fontoxml.FontoXMLService" point="configuration">
+  <configuration>
+    <renditionCallbackChain></renditionCallbackChain>
+    <defaultRendition>OriginalJpeg</defaultRendition>
+    <renditionXPath></renditionXPath>
+  </configuration>
+</extension>
+```
+
+* In `renditionCallbackChain`, set the ID of an automation chain
+  * Optional. Default value is `""` (no chain)
+  * Remember the ID of a scripting automation starts with `javascript.`
+  * This chain receives the image document as input and must return a blob (or `null`)
+  * This allows for dynamically deciding what to return (maybe based on metadata)
+  * Example:
+
+```
+// input: document, output: blob
+function run(input, params) {
+  var rendition = null;
+  
+  // In this example, we use a the dc:expired field that tells us if the image rights have expired
+  // If yes, we return a precalculated watermarked rendition, else we return null and the system will
+  // get the "OriginalJpeg"
+  if(input["dc:expired"] && input["dc:expired"] > (new Date()).toISOString()) {
+    rendition = Picture.getView(input, {"vieName": "Watermarked"});
+    // If this rendition does not exist yet, lets watermark dynamically
+    // Find an example of how to watermark here: https://doc.nuxeo.com/nxdoc/how-to-contribute-picture-conversions/
+    if(!rendition ) {
+      rendition = Blob.RunConverter(
+                    input["file:content"], {
+                      "converter": "WatermarConverterToJpeg",
+                      "parameters": "targetFileName="copyrighted.jpeg"
+                   });
+    }
+  }
+  
+  // If null, the service will get the defaultRendition
+  return rendition;
+}
+```
+
+* In `defaultRendition`, set the name of a rendition
+  * Optional. Default value is "OriginalJpeg"
+  * This is the `title` of a rendition in the `picture:views` field
+
+* In `xpath`, put the xpath of a field holding the blob to use for the asset
+
+
+
 ## Features in the Context of this POC
 Now, a not-really-started, not-finished :-) and _unordered_ list of items in the context of this POC
 
 * **Implemented endpoints** (see `FontoXMLServlet`):
   * (**IMPORTANT REMINDER** (in case we did not enough stress this point :-)): This is a POC implementation, not a final product)
   * `GET /document`
+  * `GET /asset`
   * `GET /asset/preview`
   * `GET /heartbeat`
   * `POST /browse`
