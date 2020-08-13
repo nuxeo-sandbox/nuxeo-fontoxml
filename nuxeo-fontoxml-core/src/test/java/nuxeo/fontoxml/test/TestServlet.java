@@ -62,7 +62,6 @@ import nuxeo.fontoxml.test.utils.Utilities;
 @RepositoryConfig(init = DefaultRepositoryInit.class, cleanup = Granularity.METHOD)
 @Deploy("org.nuxeo.ecm.platform.types.api")
 @Deploy("org.nuxeo.ecm.platform.types.core")
-@Deploy("org.nuxeo.ecm.platform.filemanager.core")
 @Deploy("org.nuxeo.ecm.platform.picture.api")
 @Deploy("org.nuxeo.ecm.platform.picture.core")
 @Deploy("org.nuxeo.ecm.platform.picture.convert")
@@ -190,6 +189,10 @@ public class TestServlet extends MockedServlet {
 
     }
 
+    /*
+     * We don't test misc. configurations with automation chain, defaultRendition or xpath => this is tested with the
+     * service (TestFontoXMLService)
+     */
     @Test
     public void shouldGetAssetUsingDefaultConfig() throws Exception {
 
@@ -229,53 +232,6 @@ public class TestServlet extends MockedServlet {
         ImageInfo imageInfo = imagingService.getImageInfo(image);
         assertEquals(originalImageInfo.getWidth(), originalImageInfo.getWidth());
         assertEquals(originalImageInfo.getHeight(), imageInfo.getHeight());
-
-    }
-
-    @Test
-    @Deploy("org.nuxeo.ecm.automation.scripting")
-    @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core:get-asset-rendition-from-automation.xml")
-    public void shouldGetAssetUsingAutomation() throws Exception {
-
-        DocumentModel doc = Utilities.createDocumentFromFile(session, "/", "Picture", "home_bg.jpg", "image/jpeg");
-        // Assume it created a Picture...
-        // See the get-asset-rendition-from-automation.xml script
-        // => here we ask to get the "Thumbnail" rendition
-        doc.setPropertyValue("dc:description", "Thumbnail");
-        doc = session.saveDocument(doc);
-
-        // Wait for picture:views to be calculated
-        Utilities.waitForAsyncWorkAndStartTransaction(session);
-
-        // Get value sfor the test below
-        Blob testBlob = null;
-        MultiviewPicture mvp = doc.getAdapter(MultiviewPicture.class);
-        PictureView pv = mvp.getView("Thumbnail");
-        testBlob = pv.getBlob();
-        ImageInfo testImageInfo = imagingService.getImageInfo(testBlob);
-
-        // Now, test the servlet
-        JSONObject context = new JSONObject();
-        context.put(Constants.PARAM_DOC_ID, doc.getId());
-        Map<String, String> params = new HashMap<String, String>();
-        params.put(Constants.PARAM_CONTEXT, context.toString());
-        params.put(Constants.PARAM_ID, doc.getId());// Using same doc to get the blob
-
-        run("GET", Constants.PATH_ASSET, params, null, true);
-
-        verify(mockResponse).setStatus(HttpServletResponse.SC_OK);
-        verify(mockResponse).setContentType("image/jpeg");
-
-        String fileName = testBlob.getFilename();
-        String contentDisposition = DownloadHelper.getRFC2231ContentDisposition(mockRequest, fileName, null);
-        verify(mockResponse).setHeader("Content-Disposition", contentDisposition);
-
-        Blob image = Blobs.createBlob(responseOutputStream.toByteArray());
-        // Check the blob is the same
-        assertEquals(testBlob.getLength(), image.getLength());
-        ImageInfo imageInfo = imagingService.getImageInfo(image);
-        assertEquals(testImageInfo.getWidth(), imageInfo.getWidth());
-        assertEquals(testImageInfo.getHeight(), testImageInfo.getHeight());
 
     }
 

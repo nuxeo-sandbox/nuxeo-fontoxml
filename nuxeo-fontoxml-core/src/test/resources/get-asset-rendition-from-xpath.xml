@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="nuxeo.fontoxml.test.getAssetRenditioFromXPath">
+
+  <!-- Override default contrib -->
+  <require>com.nuxeo.fontoxml.FontoXMLService</require>
+  <extension target="com.nuxeo.fontoxml.FontoXMLService" point="configuration">
+    <configuration>
+      <renditionCallbackChain></renditionCallbackChain>
+      <defaultRendition></defaultRendition>
+      <renditionXPath>thumb:thumbnail</renditionXPath>
+    </configuration>
+  </extension>
+
+</component>

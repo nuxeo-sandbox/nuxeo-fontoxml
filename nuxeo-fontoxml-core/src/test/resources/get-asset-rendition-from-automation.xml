@@ -9,9 +9,7 @@
       <!-- If the chain returns null -->
       <defaultRendition>Small</defaultRendition>
       <!-- If the default rendition is not found. No default xpath here -->
-      <renditionXPath></renditionXPath>
-      <!-- "someschema:somefield" is not an existing schema => the service should return file:content if all previous elemnts 
-        returned null -->
+      <renditionXPath>thumb:thumbnail</renditionXPath>
     </configuration>
   </extension>
 

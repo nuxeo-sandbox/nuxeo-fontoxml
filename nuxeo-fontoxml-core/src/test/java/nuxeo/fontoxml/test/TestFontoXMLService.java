@@ -18,9 +18,14 @@
  */
 package nuxeo.fontoxml.test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
-import org.apache.commons.lang3.StringUtils;
+import java.io.Serializable;
+
+import javax.inject.Inject;
+
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.ecm.automation.test.AutomationFeature;
@@ -30,11 +35,9 @@ import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.test.DefaultRepositoryInit;
 import org.nuxeo.ecm.core.test.annotations.Granularity;
 import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
-import org.nuxeo.ecm.platform.picture.api.ImageInfo;
 import org.nuxeo.ecm.platform.picture.api.ImagingService;
 import org.nuxeo.ecm.platform.picture.api.PictureView;
 import org.nuxeo.ecm.platform.picture.api.adapters.MultiviewPicture;
-import org.nuxeo.ecm.platform.test.PlatformFeature;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -45,15 +48,17 @@ import com.nuxeo.fontoxml.FontoXMLServiceImpl;
 
 import nuxeo.fontoxml.test.utils.Utilities;
 
-import javax.inject.Inject;
-
 @RunWith(FeaturesRunner.class)
 @Features(AutomationFeature.class)
 @RepositoryConfig(init = DefaultRepositoryInit.class, cleanup = Granularity.METHOD)
+@Deploy("org.nuxeo.ecm.platform.types.api")
+@Deploy("org.nuxeo.ecm.platform.types.core")
+@Deploy("org.nuxeo.ecm.platform.thumbnail")
 @Deploy("org.nuxeo.ecm.platform.picture.api")
 @Deploy("org.nuxeo.ecm.platform.picture.core")
 @Deploy("org.nuxeo.ecm.platform.picture.convert")
 @Deploy("org.nuxeo.ecm.platform.tag")
+@Deploy("org.nuxeo.ecm.automation.scripting")
 @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core")
 public class TestFontoXMLService {
 
@@ -81,7 +86,7 @@ public class TestFontoXMLService {
         // See values in get-asset-rendition-from-automation.xml
         assertEquals("javascript.testGetRendition", config.getRenditionCallbackChain());
         assertEquals("Small", config.getDefaultRendition());
-        assertTrue(StringUtils.isBlank(config.getRenditionXPath()));
+        assertEquals("thumb:thumbnail", config.getRenditionXPath());
     }
 
     @Test
@@ -109,11 +114,7 @@ public class TestFontoXMLService {
         assertEquals(testBlob.getLength(), result.getLength());
         assertEquals(testBlob.getFilename(), result.getFilename());
         assertEquals(testBlob.getMimeType(), result.getMimeType());
-        // If they have the same length, do we _really_ need to check they have the same dimensions? ;-)
-        ImageInfo testImageInfo = imagingService.getImageInfo(testBlob);
-        ImageInfo imageInfo = imagingService.getImageInfo(result);
-        assertEquals(testImageInfo.getWidth(), imageInfo.getWidth());
-        assertEquals(testImageInfo.getHeight(), testImageInfo.getHeight());
+        // If they have the same length/filename and mimetype, we can assume they are the same :-)
 
     }
 
@@ -136,15 +137,66 @@ public class TestFontoXMLService {
         // Call the service
         Blob result = fontoxmlservice.getRendition(session, doc);
 
-        // Check we basically have the same blob as testBlob
+        // Check
         assertEquals(testBlob.getLength(), result.getLength());
         assertEquals(testBlob.getFilename(), result.getFilename());
         assertEquals(testBlob.getMimeType(), result.getMimeType());
-        // If they have the same length, do we _really_ need to check they have the same dimensions? ;-)
-        ImageInfo testImageInfo = imagingService.getImageInfo(testBlob);
-        ImageInfo imageInfo = imagingService.getImageInfo(result);
-        assertEquals(testImageInfo.getWidth(), imageInfo.getWidth());
-        assertEquals(testImageInfo.getHeight(), testImageInfo.getHeight());
+
+    }
+
+    @Test
+    @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core:get-asset-rendition-from-xpath.xml")
+    public void shouldReturnABlobFromXPath() {
+
+        DocumentModel doc = Utilities.createDocumentFromFile(session, "/", "Picture", "home_bg.jpg", "image/jpeg");
+
+        // Wait for picture:views to be calculated
+        Utilities.waitForAsyncWorkAndStartTransaction(session);
+
+        // The XML contribution states to get the value in thumb:thumbnail field,
+        // let's fill it with the "Thumbnail" blob
+        MultiviewPicture mvp = doc.getAdapter(MultiviewPicture.class);
+        PictureView pv = mvp.getView("Thumbnail");
+        Blob thumbnail = pv.getBlob();
+        doc.addFacet("Thumbnail");
+        doc.setPropertyValue("thumb:thumbnail", (Serializable) thumbnail);
+        doc = session.saveDocument(doc);
+        session.save();
+
+        // Call the service
+        Blob result = fontoxmlservice.getRendition(session, doc);
+
+        // Check
+        assertEquals(thumbnail.getLength(), result.getLength());
+        assertEquals(thumbnail.getFilename(), result.getFilename());
+        assertEquals(thumbnail.getMimeType(), result.getMimeType());
+
+    }
+
+    @Ignore
+    @Test
+    @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core:get-asset-rendition-from-xpath.xml")
+    public void shouldReturnMainBlob() {
+
+        DocumentModel doc = Utilities.createDocumentFromFile(session, "/", "Picture", "home_bg.jpg", "image/jpeg");
+
+        // Wait for picture:views to be calculated
+        Utilities.waitForAsyncWorkAndStartTransaction(session);
+
+        // The XML contribution states to get the value in thumb:thumbnail field,
+        // we let it empty so the service will get the main blob
+        doc.addFacet("Thumbnail");
+        doc = session.saveDocument(doc);
+        session.save();
+
+        // Call the service
+        Blob result = fontoxmlservice.getRendition(session, doc);
+
+        // Check
+        Blob mainBlob = (Blob) doc.getPropertyValue("file:content");
+        assertEquals(mainBlob.getLength(), result.getLength());
+        assertEquals(mainBlob.getFilename(), result.getFilename());
+        assertEquals(mainBlob.getMimeType(), result.getMimeType());
 
     }
 }
