@@ -1,9 +1,22 @@
+/*
+ * (C) Copyright 2020 Nuxeo (http://nuxeo.com/) and others.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Contributors:
+ *     Thibaud Arguillere
+ */
 package nuxeo.fontoxml.test;
-
-import com.nuxeo.fontoxml.servlet.Constants;
-
-import nuxeo.fontoxml.test.utils.MockedServlet;
-import nuxeo.fontoxml.test.utils.TestMockersAndFakers;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -11,8 +24,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.verify;
 
-import java.io.File;
-import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,27 +33,29 @@ import javax.servlet.http.HttpServletResponse;
 import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.nuxeo.common.utils.FileUtils;
 import org.nuxeo.ecm.automation.test.AutomationFeature;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
-import org.nuxeo.ecm.core.api.impl.blob.StringBlob;
-import org.nuxeo.ecm.core.event.EventService;
+import org.nuxeo.ecm.core.io.download.DownloadHelper;
 import org.nuxeo.ecm.core.test.DefaultRepositoryInit;
 import org.nuxeo.ecm.core.test.annotations.Granularity;
 import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
-import org.nuxeo.ecm.platform.filemanager.api.FileImporterContext;
-import org.nuxeo.ecm.platform.filemanager.api.FileManager;
 import org.nuxeo.ecm.platform.picture.api.ImageInfo;
 import org.nuxeo.ecm.platform.picture.api.ImagingService;
+import org.nuxeo.ecm.platform.picture.api.PictureView;
+import org.nuxeo.ecm.platform.picture.api.adapters.MultiviewPicture;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
-import org.nuxeo.runtime.transaction.TransactionHelper;
 
 import com.google.common.collect.ImmutableMap;
+import com.nuxeo.fontoxml.servlet.Constants;
+
+import nuxeo.fontoxml.test.utils.MockedServlet;
+import nuxeo.fontoxml.test.utils.TestMockersAndFakers;
+import nuxeo.fontoxml.test.utils.Utilities;
 
 @RunWith(FeaturesRunner.class)
 @Features(AutomationFeature.class)
@@ -62,45 +75,10 @@ public class TestServlet extends MockedServlet {
     public static final String PSEUDO_XML_CONTENT = "This should be XML";
 
     @Inject
-    protected CoreSession coreSession;
-    
+    protected CoreSession session;
+
     @Inject
     protected ImagingService imagingService;
-    
-    @Inject
-    protected FileManager fileManager;
-
-    @Inject
-    protected EventService eventService;
-
-    protected DocumentModel createTestDoc(boolean withBlob, String blobMimeType) {
-
-        DocumentModel doc = coreSession.createDocumentModel("/", "test", "File");
-        doc.setPropertyValue("dc:title", "Test Doc");
-        if (withBlob) {
-            Blob dummyBlob = new StringBlob(PSEUDO_XML_CONTENT, blobMimeType);
-            doc.setPropertyValue("file:content", (Serializable) dummyBlob);
-        }
-
-        doc = coreSession.createDocument(doc);
-        coreSession.save();
-        // When testing a real running server => flush transaction too so the server's thread can find the document
-        TransactionHelper.commitOrRollbackTransaction();
-        TransactionHelper.startTransaction();
-
-        return doc;
-    }
-
-    protected DocumentModel createTestDoc(boolean withBlob) {
-        return createTestDoc(withBlob, null);
-    }
-    
-    protected void waitForEvents() {
-        
-        TransactionHelper.commitOrRollbackTransaction();
-        eventService.waitForAsyncCompletion();
-        TransactionHelper.startTransaction();
-    }
 
     @Test
     public void testHeartbeat() throws Exception {
@@ -113,7 +91,7 @@ public class TestServlet extends MockedServlet {
     @Test
     public void shouldGetDocument() throws Exception {
 
-        DocumentModel doc = createTestDoc(true, Constants.MIME_TYPE_XML);
+        DocumentModel doc = Utilities.createTestDoc(session, true, Constants.MIME_TYPE_XML);
 
         Map<String, String> params = ImmutableMap.of(Constants.PARAM_DOC_ID, doc.getId());
         run("GET", Constants.PATH_DOCUMENT, params, null, true);
@@ -161,7 +139,7 @@ public class TestServlet extends MockedServlet {
     @Test
     public void testGetDocumentFailsWithNoBlob() throws Exception {
 
-        DocumentModel doc = createTestDoc(false);
+        DocumentModel doc = Utilities.createTestDoc(session, false);
 
         Map<String, String> params = ImmutableMap.of(Constants.PARAM_DOC_ID, doc.getId());
         run("GET", Constants.PATH_DOCUMENT, params);
@@ -173,7 +151,7 @@ public class TestServlet extends MockedServlet {
     @Test
     public void testGetDocumentFailsWithNoXml() throws Exception {
 
-        DocumentModel doc = createTestDoc(true, "text/plain");
+        DocumentModel doc = Utilities.createTestDoc(session, true, "text/plain");
 
         Map<String, String> params = ImmutableMap.of(Constants.PARAM_DOC_ID, doc.getId());
         run("GET", Constants.PATH_DOCUMENT, params);
@@ -189,7 +167,7 @@ public class TestServlet extends MockedServlet {
 
         // We test with the xml file. The code gets the thumbnail and the test
         // provides one so it's fine
-        DocumentModel doc = createTestDoc(true, "text/plain");
+        DocumentModel doc = Utilities.createTestDoc(session, true, "text/plain");
 
         // See GET /preview. Several parameters are expected in the body, even if not handled
         JSONObject context = new JSONObject();
@@ -209,33 +187,21 @@ public class TestServlet extends MockedServlet {
         ImageInfo imageInfo = imagingService.getImageInfo(image);
         assertTrue(imageInfo.getWidth() <= 128);
         assertTrue(imageInfo.getHeight() <= 128);
-        
+
     }
 
     @Test
     public void shouldGetAssetUsingDefaultConfig() throws Exception {
 
-        // Create an asset. Using the file manager so we have the mimetype set etc.
-        File f = FileUtils.getResourceFileFromContext("home_bg.jpg");
-        Blob blob = Blobs.createBlob(f);
+        DocumentModel doc = Utilities.createDocFromBlob(session, "home_bg.jpg");
 
-        FileImporterContext fmContext = FileImporterContext.builder(coreSession, blob, "/")
-                                                         .overwrite(true)
-                                                         .mimeTypeCheck(true)
-                                                         .build();
-        DocumentModel doc = fileManager.createOrUpdateDocument(fmContext);
-        coreSession.save();
-        waitForEvents();
-        
         // Check all is good before running the real test
-        doc.refresh();
         assertEquals("Picture", doc.getType());
+        // Store values for the test
         Blob originalBlob = (Blob) doc.getPropertyValue("file:content");
-        assertNotNull(originalBlob);
         String originalMimeType = originalBlob.getMimeType();
-        assertNotNull(originalMimeType);
         ImageInfo originalImageInfo = imagingService.getImageInfo(originalBlob);
-        
+
         // Now, test the servlet
         JSONObject context = new JSONObject();
         context.put(Constants.PARAM_DOC_ID, doc.getId());
@@ -254,16 +220,60 @@ public class TestServlet extends MockedServlet {
         Blob image = Blobs.createBlob(responseOutputStream.toByteArray());
         // But the dimensions should be the same
         ImageInfo imageInfo = imagingService.getImageInfo(image);
-        assertEquals(imageInfo.getWidth(), originalImageInfo.getWidth());
-        assertEquals(imageInfo.getHeight(), originalImageInfo.getHeight());
-        
+        assertEquals(originalImageInfo.getWidth(), originalImageInfo.getWidth());
+        assertEquals(originalImageInfo.getHeight(), imageInfo.getHeight());
+
+    }
+
+    @Test
+    @Deploy("org.nuxeo.ecm.automation.scripting")
+    @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core:get-asset-rendition-from-automation.xml")
+    public void shouldGetAssetUsingAutomation() throws Exception {
+
+        DocumentModel doc = Utilities.createDocFromBlob(session, "home_bg.jpg");
+        // Assume it created a Picture...
+        // See the get-asset-rendition-from-automation.xml script
+        // => here we ask to get the "Thumbnail" rendition
+        doc.setPropertyValue("dc:description", "Thumbnail");
+        doc = session.saveDocument(doc);
+        session.save();
+        // Get value sfor the test below
+        Blob testBlob = null;
+        MultiviewPicture mvp = doc.getAdapter(MultiviewPicture.class);
+        PictureView pv = mvp.getView("Thumbnail");
+        testBlob = pv.getBlob();
+        ImageInfo testImageInfo = imagingService.getImageInfo(testBlob);
+
+        // Now, test the servlet
+        JSONObject context = new JSONObject();
+        context.put(Constants.PARAM_DOC_ID, doc.getId());
+        Map<String, String> params = new HashMap<String, String>();
+        params.put(Constants.PARAM_CONTEXT, context.toString());
+        params.put(Constants.PARAM_ID, doc.getId());// Using same doc to get the blob
+
+        run("GET", Constants.PATH_ASSET, params, null, true);
+
+        verify(mockResponse).setStatus(HttpServletResponse.SC_OK);
+        verify(mockResponse).setContentType("image/jpeg");
+
+        String fileName = testBlob.getFilename();
+        String contentDisposition = DownloadHelper.getRFC2231ContentDisposition(mockRequest, fileName, null);
+        verify(mockResponse).setHeader("Content-Disposition", contentDisposition);
+
+        Blob image = Blobs.createBlob(responseOutputStream.toByteArray());
+        // Check the blob is the same
+        assertEquals(testBlob.getLength(), image.getLength());
+        ImageInfo imageInfo = imagingService.getImageInfo(image);
+        assertEquals(testImageInfo.getWidth(), imageInfo.getWidth());
+        assertEquals(testImageInfo.getHeight(), testImageInfo.getHeight());
+
     }
 
     @Test
     @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core:listener-docModifiedByFonto.xml")
     public void shouldPutDocumentAndCallListener() throws Exception {
 
-        DocumentModel doc = createTestDoc(true, Constants.MIME_TYPE_XML);
+        DocumentModel doc = Utilities.createTestDoc(session, true, Constants.MIME_TYPE_XML);
 
         // See PUT /document. Several parameters are expected in the body, even if not handled
         JSONObject body = new JSONObject();

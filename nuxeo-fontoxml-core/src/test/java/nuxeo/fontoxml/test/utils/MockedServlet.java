@@ -1,3 +1,21 @@
+/*
+ * (C) Copyright 2020 Nuxeo (http://nuxeo.com/) and others.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Contributors:
+ *     Thibaud Arguillere
+ */
 package nuxeo.fontoxml.test.utils;
 
 import static org.mockito.Mockito.mock;
@@ -28,16 +46,17 @@ public class MockedServlet {
         public void setWriteListener(WriteListener writeListener) {
         }
     }
-    
+
     protected HttpServletRequest mockRequest;
-    
+
     protected HttpServletResponse mockResponse;
-    
+
     protected ByteArrayOutputStream responseOutputStream;
-    
+
     protected ServletOutputStream sos;
-    
-    protected void run(String httpVerb, String pathInfo, Map<String, String> params, String body, boolean withOutStream) throws Exception {
+
+    protected void run(String httpVerb, String pathInfo, Map<String, String> params, String body, boolean withOutStream)
+            throws Exception {
 
         // Prepare mock request
         mockRequest = mock(HttpServletRequest.class);
@@ -48,14 +67,14 @@ public class MockedServlet {
                 when(mockRequest.getParameter(k)).thenReturn(v);
             });
         }
-        
-        if(body == null) {
+
+        if (body == null) {
             body = "";
         }
         StringReader sr = new StringReader(body);
         BufferedReader buffReader = new BufferedReader(sr);
         when(mockRequest.getReader()).thenReturn(buffReader);
-        
+
         // Prepare mock response
         mockResponse = mock(HttpServletResponse.class);
         if (withOutStream) {
@@ -70,40 +89,39 @@ public class MockedServlet {
             when(mockResponse.getOutputStream()).thenReturn(sos);
             when(mockResponse.getWriter()).thenReturn(printWriter);
         } else {
-            if(sos != null) {
+            if (sos != null) {
                 sos.close();
                 sos = null;
             }
-            
-            if(responseOutputStream != null) {
+
+            if (responseOutputStream != null) {
                 responseOutputStream.close();
                 responseOutputStream = null;
             }
         }
 
         // Call the service
-        switch(httpVerb) {
+        switch (httpVerb) {
         case "GET":
             (new FontoXMLServlet()).doGet(mockRequest, mockResponse);
             break;
-            
+
         case "POST":
             (new FontoXMLServlet()).doPost(mockRequest, mockResponse);
             break;
-            
+
         case "PUT":
             (new FontoXMLServlet()).doPut(mockRequest, mockResponse);
             break;
         }
     }
-    
+
     protected void run(String httpVerb, String pathInfo, Map<String, String> params) throws Exception {
         run(httpVerb, pathInfo, params, null, false);
     }
-    
+
     protected void run(String httpVerb, String pathInfo) throws Exception {
         run(httpVerb, pathInfo, null, null, false);
     }
-    
 
 }

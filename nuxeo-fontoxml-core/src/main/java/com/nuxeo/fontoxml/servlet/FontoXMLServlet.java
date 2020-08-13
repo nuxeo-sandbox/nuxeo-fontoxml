@@ -53,6 +53,7 @@ import org.nuxeo.ecm.core.api.thumbnail.ThumbnailService;
 import org.nuxeo.ecm.core.event.Event;
 import org.nuxeo.ecm.core.event.EventService;
 import org.nuxeo.ecm.core.event.impl.DocumentEventContext;
+import org.nuxeo.ecm.core.io.download.DownloadHelper;
 import org.nuxeo.ecm.platform.filemanager.api.FileImporterContext;
 import org.nuxeo.ecm.platform.filemanager.api.FileManager;
 import org.nuxeo.ecm.platform.picture.api.ImageInfo;
@@ -300,7 +301,7 @@ public class FontoXMLServlet extends HttpServlet {
      * handle this in this POC.
      */
     protected void handleGetAssetPreview(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        
+
         handleGetAsset(req, resp, true);
     }
 
@@ -311,8 +312,9 @@ public class FontoXMLServlet extends HttpServlet {
      * See the FontoXMLServiceImpl for explanation on how we get the blob (run a callback chain, get a rendition by its
      * name or its xpath, or get the default file:content)
      */
-    protected void handleGetAsset(HttpServletRequest req, HttpServletResponse resp, boolean isGetPreview) throws IOException {
-     // Parameters are context, id and variant
+    protected void handleGetAsset(HttpServletRequest req, HttpServletResponse resp, boolean isGetPreview)
+            throws IOException {
+        // Parameters are context, id and variant
         String context = req.getParameter(PARAM_CONTEXT);
         String assetId = req.getParameter(PARAM_ID);
 
@@ -334,21 +336,25 @@ public class FontoXMLServlet extends HttpServlet {
                             "Asset does not have the 'file' schema");
                     return;
                 }
-                
+
                 Blob assetBlob = null;
-                if(isGetPreview) {
+                if (isGetPreview) {
                     assetBlob = getAssetPreview(session, asset, req.getParameter(PARAM_VARIANT));
                 } else {
                     FontoXMLService fontoService = Framework.getService(FontoXMLService.class);
                     assetBlob = fontoService.getRendition(session, asset);
                 }
-                
+
                 if (assetBlob == null) {
-                    log.warn("Asset ID " + assetId + " (" + asset.getTitle() + ") => no rendition found to send back to FontoXML");
+                    log.warn("Asset ID " + assetId + " (" + asset.getTitle()
+                            + ") => no rendition found to send back to FontoXML");
                     resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Asset has no rendition for FontoXML");
                     return;
                 }
-                
+
+                String fileName = StringUtils.defaultIfBlank(assetBlob.getFilename(), "file");
+                String contentDisposition = DownloadHelper.getRFC2231ContentDisposition(req, fileName, null);
+                resp.setHeader("Content-Disposition", contentDisposition);
                 resp.setContentType(assetBlob.getMimeType());
                 resp.setContentLengthLong(assetBlob.getLength());
                 OutputStream out = resp.getOutputStream();
@@ -363,13 +369,13 @@ public class FontoXMLServlet extends HttpServlet {
             throw new NuxeoException("Failed to json-parse the <context> parameter", e);
         }
     }
-    
+
     protected Blob getAssetPreview(CoreSession session, DocumentModel asset, String variant) {
-        
+
         Blob blob = null;
-        
+
         log.info("variant: " + variant);
-        
+
         blob = Framework.getService(ThumbnailService.class).getThumbnail(asset, session);
         if (blob == null) {
             // We are screwed... Calculate a default one?
@@ -403,8 +409,7 @@ public class FontoXMLServlet extends HttpServlet {
             log.warn("Unhandled variant: " + variant);
             break;
         }
-        
-        
+
         return blob;
     }
 

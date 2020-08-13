@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="nuxeo.fontoxml.test.getAssetRenditioFromAutomation">
+
+  <!-- Override default contrib -->
+  <require>com.nuxeo.fontoxml.FontoXMLService</require>
+  <extension target="com.nuxeo.fontoxml.FontoXMLService" point="configuration">
+    <configuration>
+      <renditionCallbackChain>javascript.testGetRendition</renditionCallbackChain>
+      <defaultRendition></defaultRendition>
+      <renditionXPath></renditionXPath>
+    </configuration>
+  </extension>
+
+  <extension target="org.nuxeo.automation.scripting.internals.AutomationScriptingComponent" point="operation">
+    <scriptedOperation id="javascript.testGetRendition">
+      <inputType>document</inputType>
+      <outputType>blob</outputType>
+      <category>javascript</category>
+      <description></description>
+      <script><![CDATA[function run(input, params) {
+
+        var blob  = null;
+        
+        // In this test we set the description to the expected rendition
+        if(input["dc:description"]) {
+          blob = Picture.GetView(input, {'viewName': input["dc:description"]});
+        }
+        
+        return blob;
+      
+      }]]></script>
+    </scriptedOperation>
+  </extension>
+
+</component>
