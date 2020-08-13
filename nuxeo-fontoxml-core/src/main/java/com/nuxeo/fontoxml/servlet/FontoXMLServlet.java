@@ -38,7 +38,9 @@ import org.apache.commons.logging.LogFactory;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.nuxeo.ecm.automation.features.PlatformFunctions;
 import org.nuxeo.ecm.core.api.Blob;
+import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.CloseableCoreSession;
 import org.nuxeo.ecm.core.api.CoreInstance;
 import org.nuxeo.ecm.core.api.CoreSession;
@@ -72,9 +74,6 @@ import com.nuxeo.fontoxml.FontoXMLService;
  * Please, read the README for a list of features/implementation/"not implemented"/shortcuts used for this POC/ etc.
  * TODO for supporting F4D. Implement:
  * POST /document => Ok, documented
- * GET /document/state => not documented
- * GET /asset => same as get /asset/preview, but we don't use "variant". Tghis is where we must decide if we return a
- * rendition instead of the 300MB PhotoSHop ;-))...
  * Optional:
  * GET /document/pre-search
  * If using the Fonto backend =>W Implement the re-routing of fonto front end request to this backend(cf. documentation)
@@ -128,6 +127,10 @@ public class FontoXMLServlet extends HttpServlet {
         log.info("POST " + path);
 
         switch (path) {
+        case PATH_DOCUMENT:
+            handlePostDocument(req, resp);
+            break;
+
         case PATH_BROWSE:
             try {
                 DocumentBrowser browser = new DocumentBrowser(req, resp);
@@ -414,6 +417,89 @@ public class FontoXMLServlet extends HttpServlet {
     }
 
     /*
+     * POST /document
+     * This service is used if a new document is created within the FontoXML application. The CMS must store the
+     * document and optionally respond the modified content and/or metadata. The documentId should be provided by the
+     * CMS.
+     * Take special care that the CMS should also automatically give the lock for the document to the editor.
+     * -
+     * We don't have a name for the blob, no info...
+     * TODO * Find a way to get a title and a container
+     * * Have a service telling us whicb type of document to create
+     */
+    protected void handlePostDocument(HttpServletRequest req, HttpServletResponse resp)
+            throws IOException, ServletException {
+
+        String body = IOUtils.toString(req.getReader());
+        try {
+            JSONObject bodyJson = new JSONObject(body);
+            JSONObject context = bodyJson.getJSONObject(PARAM_CONTEXT);
+            String content = bodyJson.getString(PARAM_CONTENT);
+            // Those are optional
+            String folderId = bodyJson.optString(PARAM_FOLDER_ID);
+            JSONObject metadata = bodyJson.optJSONObject(PARAM_METADATA);
+
+            // If we don't folderId a folerId, wondering where to create the new document...
+            // We maybe should create a folder at DOmain level, or, better, run an
+            // automation chain that will tell us where to create the document.
+            if (StringUtils.isBlank(folderId)) {
+                log.error("Cann create a new document without a container");
+                ServletUtils.sendStringResponse(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                        "Cannot create a new document without a container");
+                return;
+            }
+
+            try (CloseableCoreSession session = CoreInstance.openCoreSession(null)) {
+                DocumentModel destContainer;
+                DocumentRef containerRef = new IdRef(folderId);
+                if (!session.exists(containerRef)) {
+                    log.warn("Destination folder " + folderId + " not found");
+                    ServletUtils.sendStringResponse(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                            "Destination folder " + folderId + " not found");
+                    return;
+                }
+                destContainer = session.getDocument(containerRef);
+
+                Blob blob = Blobs.createBlob(content, MIME_TYPE_XML);
+                PlatformFunctions pf = new PlatformFunctions();
+                String fileName = "XML-Doc-" + pf.getNextId("FontoPostDocument") + ".xml";
+                blob.setFilename(fileName);
+                DocumentModel doc = session.createDocumentModel(destContainer.getPathAsString(), fileName, "File");
+                doc.setPropertyValue("dc:title", fileName);
+                doc = session.createDocument(doc);
+                
+                JSONObject responseJson = new JSONObject();
+                responseJson.put(PARAM_DOC_ID, doc.getId());
+                responseJson.put(PARAM_CONTENT, content);
+                JSONObject lock = getLockInfoForFonto(doc);
+                responseJson.put(PARAM_LOCK, lock);
+                
+                JSONObject documentContext = new JSONObject();
+                // We save in our private context the same object
+                documentContext.put("lockInfo", lock);
+                // Let's add stuff "just in case" (to be removed from the final product, only put what's
+                // interesting)
+                documentContext.put(DOC_TYPE, doc.getType());
+                documentContext.put(DOC_STATE, doc.getCurrentLifeCycleState());
+                responseJson.put(PARAM_DOCUMENT_CONTEXT, documentContext);
+                // - Optional, revisionId
+                //   (unused in this POC)
+                // - Optional, metadata
+                //   (unused in this POC)
+                
+                String response = responseJson.toString();
+                ServletUtils.sendStringResponse(resp, HttpServletResponse.SC_CREATED, response);
+                
+
+            }
+
+        } catch (JSONException e) {
+            throw new NuxeoException("Failed to json-parse a string", e);
+        }
+
+    }
+
+    /*
      * POST /asset
      * FontoXML will issue a multipart/form-data request containing the uploaded file and the metadata to associate with
      * the file.
@@ -451,7 +537,7 @@ public class FontoXMLServlet extends HttpServlet {
                 } else {
                     DocumentRef containerRef = new IdRef(folderId);
                     if (!session.exists(containerRef)) {
-                        log.warn("Dest folder " + folderId + " not found");
+                        log.warn("Destination folder " + folderId + " not found");
                         ServletUtils.sendStringResponse(resp, HttpServletResponse.SC_NOT_FOUND, null);
                         return;
                     }
@@ -492,7 +578,7 @@ public class FontoXMLServlet extends HttpServlet {
                 }
 
                 String response = result.toString();
-                ServletUtils.sendOKStringResponse(resp, response);
+                ServletUtils.sendStringResponse(resp, HttpServletResponse.SC_CREATED, response);
 
             } // CloseableCoreSession
 
