@@ -1,5 +1,4 @@
 node_modules
-nashorn_code_cache
 dist
 bower_components
 .tmp
