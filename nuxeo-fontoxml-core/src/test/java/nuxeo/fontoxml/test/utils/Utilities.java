@@ -18,29 +18,48 @@
  */
 package nuxeo.fontoxml.test.utils;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 import java.io.File;
 import java.io.Serializable;
 
-import org.apache.commons.lang3.StringUtils;
 import org.nuxeo.common.utils.FileUtils;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
+import org.nuxeo.ecm.core.api.impl.blob.FileBlob;
 import org.nuxeo.ecm.core.api.impl.blob.StringBlob;
 import org.nuxeo.ecm.core.event.EventService;
 import org.nuxeo.ecm.platform.filemanager.api.FileImporterContext;
 import org.nuxeo.ecm.platform.filemanager.api.FileManager;
-import org.nuxeo.ecm.platform.picture.api.ImageInfo;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.transaction.TransactionHelper;
 
 public class Utilities {
 
     public static final String PSEUDO_XML_CONTENT = "This should be XML";
+    
+    public static DocumentModel createDocumentFromFile(CoreSession session, String parentPath, String inType,
+            String inResourceFilePath, String mimeType) {
+
+        File f = FileUtils.getResourceFileFromContext(inResourceFilePath);
+        Blob blob = new FileBlob(f);
+        if(mimeType != null) {
+            blob.setMimeType(mimeType);
+        }
+
+        DocumentModel doc = session.createDocumentModel(parentPath, f.getName(), inType);
+        doc.setPropertyValue("dc:title", f.getName());
+        doc.setPropertyValue("file:content", (Serializable) blob);
+        return session.createDocument(doc);
+
+    }
+
+    public static DocumentModel createDocumentFromFile(CoreSession session, DocumentModel inParent, String inType,
+            String inResourceFilePath, String mimeType) {
+
+        return createDocumentFromFile(session, inParent.getPathAsString(), inType, inResourceFilePath, mimeType);
+
+    }
 
     public static DocumentModel createTestDoc(CoreSession session, boolean withBlob, String blobMimeType) {
 
@@ -64,31 +83,12 @@ public class Utilities {
         return Utilities.createTestDoc(session, withBlob, null);
     }
 
-    public static DocumentModel createDocFromBlob(CoreSession session, String resourceFile) throws Exception {
+    public static void waitForAsyncWorkAndStartTransaction(CoreSession session) {
 
-        FileManager fileManager = Framework.getService(FileManager.class);
 
-        // Create an asset. Using the file manager so we have the mimetype set etc.
-        File f = FileUtils.getResourceFileFromContext(resourceFile);
-        Blob blob = Blobs.createBlob(f);
-
-        FileImporterContext fmContext = FileImporterContext.builder(session, blob, "/")
-                                                           .overwrite(true)
-                                                           .mimeTypeCheck(true)
-                                                           .build();
-        DocumentModel doc = fileManager.createOrUpdateDocument(fmContext);
-        
         session.save();
-        Utilities.waitForAsyncWorkAndStartTransaction();
-
-        doc.refresh();
-        return doc;
-    }
-
-    public static void waitForAsyncWorkAndStartTransaction() {
 
         EventService eventService = Framework.getService(EventService.class);
-
         TransactionHelper.commitOrRollbackTransaction();
         eventService.waitForAsyncCompletion();
         TransactionHelper.startTransaction();

@@ -193,11 +193,12 @@ public class TestServlet extends MockedServlet {
     @Test
     public void shouldGetAssetUsingDefaultConfig() throws Exception {
 
-        DocumentModel doc = Utilities.createDocFromBlob(session, "home_bg.jpg");
+        DocumentModel doc = Utilities.createDocumentFromFile(session, "/", "Picture", "home_bg.jpg", "image/jpeg");
 
-        // Check all is good before running the real test
-        assertEquals("Picture", doc.getType());
-        // Store values for the test
+        // Wait for picture:views to be calculated
+        Utilities.waitForAsyncWorkAndStartTransaction(session);
+
+        // Store info to compare with
         Blob originalBlob = (Blob) doc.getPropertyValue("file:content");
         String originalMimeType = originalBlob.getMimeType();
         ImageInfo originalImageInfo = imagingService.getImageInfo(originalBlob);
@@ -216,9 +217,15 @@ public class TestServlet extends MockedServlet {
         verify(mockResponse).setContentType(originalMimeType);
 
         // Default config uses the "original jpeg" rendition (no callback chain, no xpath)
-        // => filenampe and lenght will not be the same, do not test on these
+        MultiviewPicture mvp = doc.getAdapter(MultiviewPicture.class);
+        PictureView pv = mvp.getView("OriginalJpeg");
+        Blob testBlob = pv.getBlob();
+        String fileName = testBlob.getFilename();
+        String contentDisposition = DownloadHelper.getRFC2231ContentDisposition(mockRequest, fileName, null);
+        verify(mockResponse).setHeader("Content-Disposition", contentDisposition);
+
         Blob image = Blobs.createBlob(responseOutputStream.toByteArray());
-        // But the dimensions should be the same
+        assertEquals(testBlob.getLength(), image.getLength());
         ImageInfo imageInfo = imagingService.getImageInfo(image);
         assertEquals(originalImageInfo.getWidth(), originalImageInfo.getWidth());
         assertEquals(originalImageInfo.getHeight(), imageInfo.getHeight());
@@ -230,13 +237,16 @@ public class TestServlet extends MockedServlet {
     @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core:get-asset-rendition-from-automation.xml")
     public void shouldGetAssetUsingAutomation() throws Exception {
 
-        DocumentModel doc = Utilities.createDocFromBlob(session, "home_bg.jpg");
+        DocumentModel doc = Utilities.createDocumentFromFile(session, "/", "Picture", "home_bg.jpg", "image/jpeg");
         // Assume it created a Picture...
         // See the get-asset-rendition-from-automation.xml script
         // => here we ask to get the "Thumbnail" rendition
         doc.setPropertyValue("dc:description", "Thumbnail");
         doc = session.saveDocument(doc);
-        session.save();
+
+        // Wait for picture:views to be calculated
+        Utilities.waitForAsyncWorkAndStartTransaction(session);
+
         // Get value sfor the test below
         Blob testBlob = null;
         MultiviewPicture mvp = doc.getAdapter(MultiviewPicture.class);

@@ -8,7 +8,7 @@ public interface FontoXMLService {
 
     /**
      * Returns the blob to send to Fonto (when it is sending a GET /asset request).
-     * Typical usage could be:
+     * Typical usage could be (this is not required, you implement the service as you want):
      * - If the configuration has a renditionCallbackChain => calls it to get the blob
      * - Else (or if the chain returns null), use the defaultRendition to get the blob
      * - If no blobs returned by these 2 then return file:content
@@ -19,4 +19,5 @@ public interface FontoXMLService {
      * @since 10.10
      */
     public Blob getRendition(CoreSession session, DocumentModel doc);
+    
 }
