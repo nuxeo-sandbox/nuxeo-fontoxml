@@ -41,6 +41,7 @@ import org.json.JSONObject;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.CloseableCoreSession;
 import org.nuxeo.ecm.core.api.CoreInstance;
+import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.DocumentRef;
 import org.nuxeo.ecm.core.api.IdRef;
@@ -58,6 +59,8 @@ import org.nuxeo.ecm.platform.picture.api.ImageInfo;
 import org.nuxeo.ecm.platform.picture.api.ImagingService;
 import org.nuxeo.runtime.api.Framework;
 
+import com.nuxeo.fontoxml.FontoXMLService;
+
 /**
  * Servlet answering requests sent to /fontoxml
  * See https://documentation.fontoxml.com/editor/latest/cms-connectors-api-7274761.html
@@ -66,6 +69,14 @@ import org.nuxeo.runtime.api.Framework;
  */
 /*
  * Please, read the README for a list of features/implementation/"not implemented"/shortcuts used for this POC/ etc.
+ * TODO for supporting F4D. Implement:
+ * POST /document => Ok, documented
+ * GET /document/state => not documented
+ * GET /asset => same as get /asset/preview, but we don't use "variant". Tghis is where we must decide if we return a
+ * rendition instead of the 300MB PhotoSHop ;-))...
+ * Optional:
+ * GET /document/pre-search
+ * If using the Fonto backend =>W Implement the re-routing of fonto front end request to this backend(cf. documentation)
  */
 public class FontoXMLServlet extends HttpServlet {
 
@@ -87,6 +98,10 @@ public class FontoXMLServlet extends HttpServlet {
         switch (path) {
         case PATH_DOCUMENT:
             handleGetDocument(req, resp);
+            break;
+
+        case PATH_ASSET:
+            handleGetAsset(req, resp, false);
             break;
 
         case PATH_ASSET_PREVIEW:
@@ -230,7 +245,7 @@ public class FontoXMLServlet extends HttpServlet {
                     resp.sendError(HttpServletResponse.SC_NOT_FOUND, "This document contains no XML");
                     return;
                 }
-                
+
                 String xml = blob.getString();
                 // log.warn("blob.getString => \n" + xml);
 
@@ -285,12 +300,22 @@ public class FontoXMLServlet extends HttpServlet {
      * handle this in this POC.
      */
     protected void handleGetAssetPreview(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        // Parameters are context, id and variant
+        
+        handleGetAsset(req, resp, true);
+    }
+
+    /*
+     * GET /asset
+     * "This API has the same semantics and API shape as the G​ ET /asset/preview​, except that the ​variant​ parameter is removed."
+     * <br/>
+     * See the FontoXMLServiceImpl for explanation on how we get the blob (run a callback chain, get a rendition by its
+     * name or its xpath, or get the default file:content)
+     */
+    protected void handleGetAsset(HttpServletRequest req, HttpServletResponse resp, boolean isGetPreview) throws IOException {
+     // Parameters are context, id and variant
         String context = req.getParameter(PARAM_CONTEXT);
         String assetId = req.getParameter(PARAM_ID);
-        String variant = req.getParameter(PARAM_VARIANT);
 
-        log.info("variant: " + variant);
         try {
             JSONObject contextJson = new JSONObject(context);
             String mainDocId = contextJson.getString(PARAM_DOC_ID);
@@ -309,52 +334,25 @@ public class FontoXMLServlet extends HttpServlet {
                             "Asset does not have the 'file' schema");
                     return;
                 }
-                Blob blob = (Blob) asset.getPropertyValue("file:content");
-                if (blob == null) {
-                    log.warn("Asset ID " + assetId + " (" + asset.getTitle() + ") has no blob");
-                    resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Asset has no file");
+                
+                Blob assetBlob = null;
+                if(isGetPreview) {
+                    assetBlob = getAssetPreview(session, asset, req.getParameter(PARAM_VARIANT));
+                } else {
+                    FontoXMLService fontoService = Framework.getService(FontoXMLService.class);
+                    assetBlob = fontoService.getRendition(session, asset);
+                }
+                
+                if (assetBlob == null) {
+                    log.warn("Asset ID " + assetId + " (" + asset.getTitle() + ") => no rendition found to send back to FontoXML");
+                    resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Asset has no rendition for FontoXML");
                     return;
                 }
-
-                Blob thumbnail = Framework.getService(ThumbnailService.class).getThumbnail(asset, session);
-                if (thumbnail == null) {
-                    // We are screwed... Calculate a default one?
-                    log.warn("Asset ID " + assetId + " (" + asset.getTitle() + ") => cannot get a thumbnail");
-                    resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Cannot get a thumbnail");
-                    return;
-                }
-
-                // . . . RESIZE . . .
-                ImagingService imagingService = Framework.getService(ImagingService.class);
-                ImageInfo imageInfo = imagingService.getImageInfo(thumbnail);
-                log.info("Thumbnail size: " + imageInfo.getWidth() + "x" + imageInfo.getHeight());
-                String thumbnailMimeType = thumbnail.getMimeType();
-                switch (variant) {
-                case VARIANT_THUMBNAIL:
-                    if (imageInfo.getWidth() != 128 || imageInfo.getHeight() != 128) {
-                        log.info("RESIZING TO 128x128");
-                        thumbnail = imagingService.resize(thumbnail, imageInfo.getFormat(), 128, 128, -1);
-                        thumbnail.setMimeType(thumbnailMimeType);
-                    }
-                    break;
-
-                case VARIANT_WEB:
-                    if (imageInfo.getWidth() > 1024 || imageInfo.getHeight() > 1024) {
-                        log.info("RESIZING TO max 1024x1024");
-                        thumbnail = imagingService.resize(thumbnail, imageInfo.getFormat(), 1024, 1024, -1);
-                        thumbnail.setMimeType(thumbnailMimeType);
-                    }
-                    break;
-
-                default:
-                    log.warn("Unhandled variant: " + variant);
-                    break;
-                }
-
-                resp.setContentType(thumbnail.getMimeType());
-                resp.setContentLengthLong(thumbnail.getLength());
+                
+                resp.setContentType(assetBlob.getMimeType());
+                resp.setContentLengthLong(assetBlob.getLength());
                 OutputStream out = resp.getOutputStream();
-                IOUtils.copy(thumbnail.getStream(), out);
+                IOUtils.copy(assetBlob.getStream(), out);
                 out.close();
 
                 resp.setStatus(HttpServletResponse.SC_OK);
@@ -364,6 +362,50 @@ public class FontoXMLServlet extends HttpServlet {
         } catch (JSONException e) {
             throw new NuxeoException("Failed to json-parse the <context> parameter", e);
         }
+    }
+    
+    protected Blob getAssetPreview(CoreSession session, DocumentModel asset, String variant) {
+        
+        Blob blob = null;
+        
+        log.info("variant: " + variant);
+        
+        blob = Framework.getService(ThumbnailService.class).getThumbnail(asset, session);
+        if (blob == null) {
+            // We are screwed... Calculate a default one?
+            log.warn("Asset ID " + asset.getId() + " (" + asset.getTitle() + ") => cannot get a thumbnail");
+            return null;
+        }
+
+        // . . . RESIZE . . .
+        ImagingService imagingService = Framework.getService(ImagingService.class);
+        ImageInfo imageInfo = imagingService.getImageInfo(blob);
+        log.info("Thumbnail size: " + imageInfo.getWidth() + "x" + imageInfo.getHeight());
+        String thumbnailMimeType = blob.getMimeType();
+        switch (variant) {
+        case VARIANT_THUMBNAIL:
+            if (imageInfo.getWidth() != 128 || imageInfo.getHeight() != 128) {
+                log.info("RESIZING TO 128x128");
+                blob = imagingService.resize(blob, imageInfo.getFormat(), 128, 128, -1);
+                blob.setMimeType(thumbnailMimeType);
+            }
+            break;
+
+        case VARIANT_WEB:
+            if (imageInfo.getWidth() > 1024 || imageInfo.getHeight() > 1024) {
+                log.info("RESIZING TO max 1024x1024");
+                blob = imagingService.resize(blob, imageInfo.getFormat(), 1024, 1024, -1);
+                blob.setMimeType(thumbnailMimeType);
+            }
+            break;
+
+        default:
+            log.warn("Unhandled variant: " + variant);
+            break;
+        }
+        
+        
+        return blob;
     }
 
     /*
@@ -546,7 +588,7 @@ public class FontoXMLServlet extends HttpServlet {
                     // Raise an event so configuration can add some logic
                     DocumentEventContext eventCtx = new DocumentEventContext(session, session.getPrincipal(), doc);
                     Event eventToSend = eventCtx.newEvent(EVENT_DOC_MODIFIED_BY_FONTOWML);
-                    //eventCtx.setProperty(EVENT_CONTEXT_IS_AUTOSAVE, autosave);
+                    // eventCtx.setProperty(EVENT_CONTEXT_IS_AUTOSAVE, autosave);
                     doc.putContextData(EVENT_CONTEXT_IS_AUTOSAVE, autosave);
                     Framework.getService(EventService.class).fireEvent(eventToSend);
 

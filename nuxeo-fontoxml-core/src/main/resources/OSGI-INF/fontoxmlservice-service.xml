@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<component name="com.nuxeo.fontoxml.FontoXMLService" version="1.0">
+
+  <implementation class="com.nuxeo.fontoxml.FontoXMLServiceImpl" />
+
+  <service>
+    <provide interface="com.nuxeo.fontoxml.FontoXMLService" />
+  </service>
+
+  <extension-point name="configuration">
+    <documentation>
+      Example:
+      <code>
+        <configuration>
+          <!-- the chain must return a Blob (or null) -->
+          <renditionCallbackChain>javascript.fontoxml_getAssetRendition</renditionCallbackChain>
+          <defaultRendition>MyCustomFontoRendition</defaultRendition>
+          <renditionXPath>customschema:blobField</renditionXPath>
+        </configuration>
+      </code>
+    </documentation>
+    <object class="com.nuxeo.fontoxml.FontoXMLConfigDescriptor" />
+  </extension-point>
+
+  <!-- See the doc. There are priorities. first we run the chain (input: document, output: blob), if it returns null, we 
+    get a default rendition, if it returns null, we use the XPath. Last resort, we return file:content. -->
+  <extension target="com.nuxeo.fontoxml.FontoXMLService" point="configuration">
+    <configuration>
+      <renditionCallbackChain></renditionCallbackChain>
+      <defaultRendition>OriginalJpeg</defaultRendition>
+      <renditionXPath></renditionXPath>
+    </configuration>
+  </extension>
+
+</component>

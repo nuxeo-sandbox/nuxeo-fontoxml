@@ -11,6 +11,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.verify;
 
+import java.io.File;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,18 +22,21 @@ import javax.servlet.http.HttpServletResponse;
 import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.nuxeo.common.utils.FileUtils;
 import org.nuxeo.ecm.automation.test.AutomationFeature;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.impl.blob.StringBlob;
+import org.nuxeo.ecm.core.event.EventService;
 import org.nuxeo.ecm.core.test.DefaultRepositoryInit;
 import org.nuxeo.ecm.core.test.annotations.Granularity;
 import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
+import org.nuxeo.ecm.platform.filemanager.api.FileImporterContext;
+import org.nuxeo.ecm.platform.filemanager.api.FileManager;
 import org.nuxeo.ecm.platform.picture.api.ImageInfo;
 import org.nuxeo.ecm.platform.picture.api.ImagingService;
-import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -43,6 +47,13 @@ import com.google.common.collect.ImmutableMap;
 @RunWith(FeaturesRunner.class)
 @Features(AutomationFeature.class)
 @RepositoryConfig(init = DefaultRepositoryInit.class, cleanup = Granularity.METHOD)
+@Deploy("org.nuxeo.ecm.platform.types.api")
+@Deploy("org.nuxeo.ecm.platform.types.core")
+@Deploy("org.nuxeo.ecm.platform.filemanager.core")
+@Deploy("org.nuxeo.ecm.platform.picture.api")
+@Deploy("org.nuxeo.ecm.platform.picture.core")
+@Deploy("org.nuxeo.ecm.platform.picture.convert")
+@Deploy("org.nuxeo.ecm.platform.tag")
 @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core")
 public class TestServlet extends MockedServlet {
 
@@ -52,6 +63,15 @@ public class TestServlet extends MockedServlet {
 
     @Inject
     protected CoreSession coreSession;
+    
+    @Inject
+    protected ImagingService imagingService;
+    
+    @Inject
+    protected FileManager fileManager;
+
+    @Inject
+    protected EventService eventService;
 
     protected DocumentModel createTestDoc(boolean withBlob, String blobMimeType) {
 
@@ -73,6 +93,13 @@ public class TestServlet extends MockedServlet {
 
     protected DocumentModel createTestDoc(boolean withBlob) {
         return createTestDoc(withBlob, null);
+    }
+    
+    protected void waitForEvents() {
+        
+        TransactionHelper.commitOrRollbackTransaction();
+        eventService.waitForAsyncCompletion();
+        TransactionHelper.startTransaction();
     }
 
     @Test
@@ -156,10 +183,6 @@ public class TestServlet extends MockedServlet {
     }
 
     @Test
-    @Deploy("org.nuxeo.ecm.platform.picture.api")
-    @Deploy("org.nuxeo.ecm.platform.picture.core")
-    @Deploy("org.nuxeo.ecm.platform.picture.convert")
-    @Deploy("org.nuxeo.ecm.platform.tag")
     @Deploy("org.nuxeo.ecm.platform.thumbnail")
     @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core:thumbnail-factory.xml")
     public void shouldGetAssetPreview() throws Exception {
@@ -183,10 +206,56 @@ public class TestServlet extends MockedServlet {
         verify(mockResponse).setContentType(TestMockersAndFakers.THUMBNAIL_MIMETYPE);
         // We asked for a thumbnail, size must be exactly 128 max
         Blob image = Blobs.createBlob(responseOutputStream.toByteArray(), TestMockersAndFakers.THUMBNAIL_MIMETYPE);
-        ImagingService imagingService = Framework.getService(ImagingService.class);
         ImageInfo imageInfo = imagingService.getImageInfo(image);
         assertTrue(imageInfo.getWidth() <= 128);
         assertTrue(imageInfo.getHeight() <= 128);
+        
+    }
+
+    @Test
+    public void shouldGetAssetUsingDefaultConfig() throws Exception {
+
+        // Create an asset. Using the file manager so we have the mimetype set etc.
+        File f = FileUtils.getResourceFileFromContext("home_bg.jpg");
+        Blob blob = Blobs.createBlob(f);
+
+        FileImporterContext fmContext = FileImporterContext.builder(coreSession, blob, "/")
+                                                         .overwrite(true)
+                                                         .mimeTypeCheck(true)
+                                                         .build();
+        DocumentModel doc = fileManager.createOrUpdateDocument(fmContext);
+        coreSession.save();
+        waitForEvents();
+        
+        // Check all is good before running the real test
+        doc.refresh();
+        assertEquals("Picture", doc.getType());
+        Blob originalBlob = (Blob) doc.getPropertyValue("file:content");
+        assertNotNull(originalBlob);
+        String originalMimeType = originalBlob.getMimeType();
+        assertNotNull(originalMimeType);
+        ImageInfo originalImageInfo = imagingService.getImageInfo(originalBlob);
+        
+        // Now, test the servlet
+        JSONObject context = new JSONObject();
+        context.put(Constants.PARAM_DOC_ID, doc.getId());
+
+        Map<String, String> params = new HashMap<String, String>();
+        params.put(Constants.PARAM_CONTEXT, context.toString());
+        params.put(Constants.PARAM_ID, doc.getId());// Using same doc to get the blob
+
+        run("GET", Constants.PATH_ASSET, params, null, true);
+
+        verify(mockResponse).setStatus(HttpServletResponse.SC_OK);
+        verify(mockResponse).setContentType(originalMimeType);
+
+        // Default config uses the "original jpeg" rendition (no callback chain, no xpath)
+        // => filenampe and lenght will not be the same, do not test on these
+        Blob image = Blobs.createBlob(responseOutputStream.toByteArray());
+        // But the dimensions should be the same
+        ImageInfo imageInfo = imagingService.getImageInfo(image);
+        assertEquals(imageInfo.getWidth(), originalImageInfo.getWidth());
+        assertEquals(imageInfo.getHeight(), originalImageInfo.getHeight());
         
     }
 

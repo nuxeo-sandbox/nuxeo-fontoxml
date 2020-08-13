@@ -1,6 +1,17 @@
 # nuxeo-fontoxml
 [![Build Status](https://qa.nuxeo.org/jenkins/buildStatus/icon?job=Sandbox/sandbox_nuxeo-fontoxml-master)](https://qa.nuxeo.org/jenkins/job/Sandbox/job/sandbox_nuxeo-fontoxml-master/)
 
+
+**WARNING: This documentation must be updated to describe the service configuration**. When Fonto calls `GET /asset`, it is possible to return a blob evaluated by configuration (not hard coded). In short:
+
+* Returned by an Automation Chain that is called back by the service
+* If there is no chain or it returned `null`, we use a rendition named
+* If there is no rendition name or no rendition of this name in picture:views, we use an xpath
+* If there is no such schema or this xpath is null, we give up and return `file:content`
+
+See fontoxmlservice-service.xml.
+
+
 ## About the Plugin
 nuxeo-fontoxml is a plugin allowing for editing XML files within Nuxeo, using the [FontoXML Editor](https://www.fontoxml.com).
 

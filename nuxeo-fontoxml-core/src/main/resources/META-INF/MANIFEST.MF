@@ -6,4 +6,5 @@ Bundle-Version: 1.0.0
 Bundle-Name: nuxeo-fontoxml-core
 Bundle-ManifestVersion: 2
 Bundle-SymbolicName: nuxeo.fontoxml.nuxeo-fontoxml-core;singleton=true
-Nuxeo-Component: OSGI-INF/request-controller-contrib.xml
+Nuxeo-Component: OSGI-INF/request-controller-contrib.xml,
+ OSGI-INF/fontoxmlservice-service.xml
