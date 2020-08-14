@@ -76,13 +76,41 @@ import com.nuxeo.fontoxml.FontoXMLService;
  * POST /document => Ok, documented
  * Optional:
  * GET /document/pre-search
- * If using the Fonto backend =>W Implement the re-routing of fonto front end request to this backend(cf. documentation)
+ * If using the Fonto backend => Implement the re-routing of fonto front end request to this backend(cf. documentation)
  */
 public class FontoXMLServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
 
     private static final Log log = LogFactory.getLog(FontoXMLServlet.class);
+    
+    protected class FontoDocumentContext {
+        
+        DocumentModel doc;
+        
+        JSONObject documentContext;
+        
+        // Called when building the document context
+        FontoDocumentContext(DocumentModel doc, JSONObject lock) throws JSONException  {
+            this.doc = doc;
+            
+            documentContext = new JSONObject();
+            
+            documentContext.put("lockInfo", lock);
+            // Let's add stuff "just in case" (to be removed from the final product, only put what's
+            // interesting)
+            documentContext.put(DOC_UUID, doc.getId());
+            documentContext.put(DOC_TYPE, doc.getType());
+            documentContext.put(DOC_STATE, doc.getCurrentLifeCycleState());
+            // More? (not everything, this travels back and forth)
+            
+        }
+        
+        public JSONObject toJSON() {
+            return documentContext; 
+        }
+        
+    }
 
     /**
      * As it is a GET, we don't do anything at repository level, no change in the document,
@@ -266,14 +294,8 @@ public class FontoXMLServlet extends HttpServlet {
                 //   ("CMS-specific data associated with the document. Will be included in related requests.")
                 //   . . . maybe do optimization and put in there data that will then not need to be recalculated or
                 //   re-fetched.. . .
-                JSONObject documentContext = new JSONObject();
-                // We save in our private context the same object
-                documentContext.put("lockInfo", lock);
-                // Let's add stuff "just in case" (to be removed from the final product, only put what's
-                // interesting)
-                documentContext.put(DOC_TYPE, doc.getType());
-                documentContext.put(DOC_STATE, doc.getCurrentLifeCycleState());
-                responseJson.put(PARAM_DOCUMENT_CONTEXT, documentContext);
+                FontoDocumentContext documentContext = new FontoDocumentContext(doc, lock);
+                responseJson.put(PARAM_DOCUMENT_CONTEXT, documentContext.toJSON());
                 // - Optional, revisionId
                 //   (unused in this POC)
                 // - Optional, metadata
@@ -423,9 +445,10 @@ public class FontoXMLServlet extends HttpServlet {
      * CMS.
      * Take special care that the CMS should also automatically give the lock for the document to the editor.
      * -
-     * We don't have a name for the blob, no info...
-     * TODO * Find a way to get a title and a container
-     * * Have a service telling us whicb type of document to create
+     * Deciding where to create the document:
+     * - If folderId is passed and is a valid Foilderish document => creted in there
+     * - Else, we look at the editSesisonToken and use the doc UID that was set up in the front end when invoking
+     * FontoXML.
      */
     protected void handlePostDocument(HttpServletRequest req, HttpServletResponse resp)
             throws IOException, ServletException {
@@ -450,15 +473,20 @@ public class FontoXMLServlet extends HttpServlet {
             }
 
             try (CloseableCoreSession session = CoreInstance.openCoreSession(null)) {
-                DocumentModel destContainer;
-                DocumentRef containerRef = new IdRef(folderId);
-                if (!session.exists(containerRef)) {
-                    log.warn("Destination folder " + folderId + " not found");
-                    ServletUtils.sendStringResponse(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                            "Destination folder " + folderId + " not found");
-                    return;
+                
+                // TODO Add a call to fonto service to have automation tell us what container to use
+                DocumentModel destContainer = null;
+                
+                if (StringUtils.isNotBlank(folderId)) {
+                    DocumentRef containerRef = new IdRef(folderId);
+                    if (session.exists(containerRef)) {
+                        destContainer = session.getDocument(containerRef);
+                    }
                 }
-                destContainer = session.getDocument(containerRef);
+                if(destContainer == null) {
+                    EditSessionToken esToken = new EditSessionToken(context.getJSONObject(PARAM_EDIT_SESSION_TOKEN));
+                    destContainer = esToken.getContainer(session);
+                }
 
                 Blob blob = Blobs.createBlob(content, MIME_TYPE_XML);
                 PlatformFunctions pf = new PlatformFunctions();
@@ -467,29 +495,23 @@ public class FontoXMLServlet extends HttpServlet {
                 DocumentModel doc = session.createDocumentModel(destContainer.getPathAsString(), fileName, "File");
                 doc.setPropertyValue("dc:title", fileName);
                 doc = session.createDocument(doc);
-                
+
                 JSONObject responseJson = new JSONObject();
                 responseJson.put(PARAM_DOC_ID, doc.getId());
                 responseJson.put(PARAM_CONTENT, content);
                 JSONObject lock = getLockInfoForFonto(doc);
                 responseJson.put(PARAM_LOCK, lock);
+
+                FontoDocumentContext documentContext = new FontoDocumentContext(doc, lock);
+                responseJson.put(PARAM_DOCUMENT_CONTEXT, documentContext.toJSON());
                 
-                JSONObject documentContext = new JSONObject();
-                // We save in our private context the same object
-                documentContext.put("lockInfo", lock);
-                // Let's add stuff "just in case" (to be removed from the final product, only put what's
-                // interesting)
-                documentContext.put(DOC_TYPE, doc.getType());
-                documentContext.put(DOC_STATE, doc.getCurrentLifeCycleState());
-                responseJson.put(PARAM_DOCUMENT_CONTEXT, documentContext);
                 // - Optional, revisionId
                 //   (unused in this POC)
                 // - Optional, metadata
                 //   (unused in this POC)
-                
+
                 String response = responseJson.toString();
                 ServletUtils.sendStringResponse(resp, HttpServletResponse.SC_CREATED, response);
-                
 
             }
 
@@ -650,6 +672,7 @@ public class FontoXMLServlet extends HttpServlet {
             JSONObject bodyJson = new JSONObject(body);
             try (CloseableCoreSession session = CoreInstance.openCoreSession(null)) {
                 // Required:
+                // We could use the editSessionToken field
                 JSONObject context = bodyJson.getJSONObject(PARAM_CONTEXT);
                 String docId = bodyJson.getString(PARAM_DOC_ID);
                 String xmlContent = bodyJson.getString(PARAM_CONTENT);

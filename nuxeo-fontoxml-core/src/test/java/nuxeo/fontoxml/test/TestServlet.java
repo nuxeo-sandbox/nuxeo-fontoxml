@@ -23,14 +23,19 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.inject.Inject;
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.Part;
 
 import org.json.JSONObject;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.ecm.automation.test.AutomationFeature;
@@ -264,6 +269,28 @@ public class TestServlet extends MockedServlet {
         String desc = (String) doc.getPropertyValue("dc:description");
         assertEquals("OK", desc);
 
+    }
+    
+    @Ignore
+    @Test
+    public void shouldPostAsset() throws Exception {
+        
+        // Will be created at root$
+        DocumentModel root = session.getRootDocument();
+        
+        // Build the PARAM_REQUEST Part
+        JSONObject requestJson = new JSONObject();
+        requestJson.put(Constants.PARAM_TYPE, "not used but expected, go figure");
+        requestJson.put(Constants.PARAM_FOLDER_ID, root.getId());
+        JSONObject context = new JSONObject();
+        context.put(Constants.PARAM_DOC_ID, ""); // we don't use this because we use PARAM_FOLDER_ID
+        requestJson.put(Constants.PARAM_CONTEXT, context);
+        Part partRequest = null;
+        when(mockRequest.getPart(Constants.PARAM_REQUEST)).thenReturn(partRequest);
+        
+        // Build the PARAM_FILE Part
+        Part partFile = null;
+        when(mockRequest.getPart(Constants.PARAM_REQUEST)).thenReturn(partFile);
     }
 
 }

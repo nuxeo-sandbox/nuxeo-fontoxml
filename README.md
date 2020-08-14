@@ -85,10 +85,25 @@ We added an iFrame to the default nuxeo-file-view-layout document, just adding:
   </iframe>
 </nuxeo-card>  
 ```
- `url` is dynamically calculated once the `document` and the `user` are loaded. The result is something like:
+ `url` is dynamically calculated once the `document` and the `user` are loaded. Among the misc. parameters expected, make sure to fill the `editSessionToken` as expected by the plugin in the backend. It mus be a JSON with 2 fields:
+ 
+ * `mainDocId`: The UUID of the current document, or the UUID of a Folderish document
+   * This is used when Font asks to create a new document.
+   * It will be created:
+     * In the mainDocId document if it is a folderish
+     * Or in the first parent of the mainDocId if it is not.
+     * Also, the service will allow for calling an automation chain with this mainDocId parameter, so it returns a folder where to create the new document, based on business logic.
+ * `unicityToken`: Any number that makes `UUID + unicityTocken` unique (typically, use `Date.now()`)
+ 
+ The result is something like:
  
  ```
 • • •
+// editSessionTocken is used by the plugin in the backend, it is required to pass these values:
+let editSessionToken = {
+  "mainDocId": this.document.uid,
+  "unicityToken": Date.now()
+}
 // See https://documentation.fontoxml.com/editor/latest/invocation-of-the-fonto-editor-30015537.html
 let queryParams = {
   "documentIds": [this.document.uid],
@@ -97,7 +112,7 @@ let queryParams = {
     "id": this.user.id,
     "displayName": this._getUserName(this.user)
   },
-  "editSessionToken": this.document.uid, // required not yet sure how to use it
+  "editSessionToken": JSON.stringify(editSessionToken),
   "autosave": false,
   "heartbeat": 60 // => must implement the GET /heartbeat endpoint
 }

@@ -53,6 +53,8 @@ public class Constants {
 
     // ========================================> FONTO PROPERTIES/PARAMETERS/...
     public static final String PARAM_CONTEXT = "context";
+    
+    public static final String PARAM_EDIT_SESSION_TOKEN = "editSessionToken";
 
     public static final String PARAM_DOC_ID = "documentId";
 
@@ -118,6 +120,8 @@ public class Constants {
     public static final String FONTO_TYPE_UNKNOWN = "unknown";
 
     // ========================================> CUSTOM INFO SEND (in context, mainly)
+    public static final String DOC_UUID = "uuid";
+    
     public static final String DOC_TYPE = "type";
 
     public static final String DOC_STATE = "state";

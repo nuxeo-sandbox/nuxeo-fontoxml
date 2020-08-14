@@ -76,6 +76,11 @@ depending on the content of the blob oif current document.
         if(!this._hasXML(this.document)) {
           console.log("_getFontoXMLUrl: Not an XML");
         }
+        // editSessionTocken is used by the plugin in the backend, it is required to pass these values:
+        let editSessionToken = {
+          "mainDocId": this.document.uid,
+          "unicityToken": Date.now()  // (Any number that makes UID + unicityTocken unique)
+        }
         // See https://documentation.fontoxml.com/editor/latest/invocation-of-the-fonto-editor-30015537.html
         let queryParams = {
           "documentIds": [this.document.uid],
@@ -84,7 +89,7 @@ depending on the content of the blob oif current document.
             "id": this.user.id,
             "displayName": this._getUserName(this.user)
           },
-          "editSessionToken": this.document.uid, // required not yet sure how to use it
+          "editSessionToken": JSON.stringify(editSessionToken),
           "autosave": false,
           "heartbeat": 60 // => must implement the GET /heartbeat endpoint
         }
@@ -92,7 +97,7 @@ depending on the content of the blob oif current document.
         requestTimeoutInSeconds
         useEmbeddedMode
         */
-        let url = "http://localhost:8080/nuxeo/ui/FontoXML?scope=" + JSON.stringify(queryParams);
+        let url = window.location.origin + "/nuxeo/ui/FontoXML?scope=" + JSON.stringify(queryParams);
         //console.log(url);
         url = encodeURI(url);
         this.url = url;
