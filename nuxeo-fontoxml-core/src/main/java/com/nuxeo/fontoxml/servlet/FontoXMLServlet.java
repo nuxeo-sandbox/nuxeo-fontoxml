@@ -445,10 +445,7 @@ public class FontoXMLServlet extends HttpServlet {
      * CMS.
      * Take special care that the CMS should also automatically give the lock for the document to the editor.
      * -
-     * Deciding where to create the document:
-     * - If folderId is passed and is a valid Foilderish document => creted in there
-     * - Else, we look at the editSesisonToken and use the doc UID that was set up in the front end when invoking
-     * FontoXML.
+     * Deciding where to create the document is up to the FontoXMLService
      */
     protected void handlePostDocument(HttpServletRequest req, HttpServletResponse resp)
             throws IOException, ServletException {
@@ -462,47 +459,33 @@ public class FontoXMLServlet extends HttpServlet {
             String folderId = bodyJson.optString(PARAM_FOLDER_ID);
             JSONObject metadata = bodyJson.optJSONObject(PARAM_METADATA);
 
-            // If we don't folderId a folerId, wondering where to create the new document...
-            // We maybe should create a folder at DOmain level, or, better, run an
-            // automation chain that will tell us where to create the document.
-            if (StringUtils.isBlank(folderId)) {
-                log.error("Cann create a new document without a container");
-                ServletUtils.sendStringResponse(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                        "Cannot create a new document without a container");
-                return;
-            }
-
             try (CloseableCoreSession session = CoreInstance.openCoreSession(null)) {
                 
-                // TODO Add a call to fonto service to have automation tell us what container to use
-                DocumentModel destContainer = null;
+                DocumentModel mainDoc = null;
+                DocumentModel folder = null;
+                
+                EditSessionToken esToken = new EditSessionToken(context.getJSONObject(PARAM_EDIT_SESSION_TOKEN));
+                mainDoc = esToken.getMainDocument(session);
                 
                 if (StringUtils.isNotBlank(folderId)) {
-                    DocumentRef containerRef = new IdRef(folderId);
-                    if (session.exists(containerRef)) {
-                        destContainer = session.getDocument(containerRef);
+                    DocumentRef docRef = new IdRef(folderId);
+                    if (session.exists(docRef)) {
+                        folder = session.getDocument(docRef);
                     }
                 }
-                if(destContainer == null) {
-                    EditSessionToken esToken = new EditSessionToken(context.getJSONObject(PARAM_EDIT_SESSION_TOKEN));
-                    destContainer = esToken.getContainer(session);
-                }
-
+                
+                DocumentModel newDoc = null;
                 Blob blob = Blobs.createBlob(content, MIME_TYPE_XML);
-                PlatformFunctions pf = new PlatformFunctions();
-                String fileName = "XML-Doc-" + pf.getNextId("FontoPostDocument") + ".xml";
-                blob.setFilename(fileName);
-                DocumentModel doc = session.createDocumentModel(destContainer.getPathAsString(), fileName, "File");
-                doc.setPropertyValue("dc:title", fileName);
-                doc = session.createDocument(doc);
+                FontoXMLService fontoService = Framework.getService(FontoXMLService.class);
+                newDoc = fontoService.createDocument(session, blob, mainDoc, folder);
 
                 JSONObject responseJson = new JSONObject();
-                responseJson.put(PARAM_DOC_ID, doc.getId());
+                responseJson.put(PARAM_DOC_ID, newDoc.getId());
                 responseJson.put(PARAM_CONTENT, content);
-                JSONObject lock = getLockInfoForFonto(doc);
+                JSONObject lock = getLockInfoForFonto(newDoc);
                 responseJson.put(PARAM_LOCK, lock);
 
-                FontoDocumentContext documentContext = new FontoDocumentContext(doc, lock);
+                FontoDocumentContext documentContext = new FontoDocumentContext(newDoc, lock);
                 responseJson.put(PARAM_DOCUMENT_CONTEXT, documentContext.toJSON());
                 
                 // - Optional, revisionId
@@ -550,29 +533,24 @@ public class FontoXMLServlet extends HttpServlet {
             String docId = context.getString(PARAM_DOC_ID);
 
             try (CloseableCoreSession session = CoreInstance.openCoreSession(null)) {
-                DocumentModel destContainer;
-                // If folderId is empty, it means "root". but we don't want to create at root level, do we? So, instead,
-                // we create a same level as current document
-                if (StringUtils.isBlank(folderId)) {
-                    // We assume the docId exists, the user is currently editing it and they have access to the parent
-                    destContainer = session.getParentDocument(new IdRef(docId));
-                } else {
-                    DocumentRef containerRef = new IdRef(folderId);
-                    if (!session.exists(containerRef)) {
-                        log.warn("Destination folder " + folderId + " not found");
-                        ServletUtils.sendStringResponse(resp, HttpServletResponse.SC_NOT_FOUND, null);
-                        return;
+                
+                DocumentModel mainDoc = null;
+                DocumentModel folder = null;
+                
+                EditSessionToken esToken = new EditSessionToken(context.getJSONObject(PARAM_EDIT_SESSION_TOKEN));
+                mainDoc = esToken.getMainDocument(session);
+                
+                if (StringUtils.isNotBlank(folderId)) {
+                    DocumentRef docRef = new IdRef(folderId);
+                    if (session.exists(docRef)) {
+                        folder = session.getDocument(docRef);
                     }
-                    destContainer = session.getDocument(containerRef);
                 }
-
+                
                 Blob blob = ServletUtils.createBlobFromPart(file);
-                // TODO create a custom doc type if needed. (configuration/etc.)
-                FileImporterContext fileCreationContext = FileImporterContext.builder(session, blob,
-                        destContainer.getPathAsString()).build();
-
-                DocumentModel asset = Framework.getService(FileManager.class)
-                                               .createOrUpdateDocument(fileCreationContext);
+                
+                FontoXMLService fontoService = Framework.getService(FontoXMLService.class);
+                DocumentModel asset = fontoService.createAsset(session, blob, mainDoc, folder);
 
                 JSONObject result = new JSONObject();
                 result.put(PARAM_ID, asset.getId());

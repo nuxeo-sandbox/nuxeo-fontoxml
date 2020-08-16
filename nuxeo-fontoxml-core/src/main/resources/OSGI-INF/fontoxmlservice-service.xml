@@ -9,10 +9,13 @@
 
   <extension-point name="configuration">
     <documentation>
-      Example:
+      Important: See Javadoc for com.nuxeo.fontoxml.FontoXMLService for explanation and details about the call back
+      operation chains.
       <code>
         <configuration>
-          <!-- the chain must return a Blob (or null) -->
+          <!-- no typeFormNewXMLDocument means the service will call the FileManager -->
+          <typeForNewXMLDocument></typeForNewXMLDocument>
+          <documentCreationCallbackChain>javascript.fontoxml_createDocument</documentCreationCallbackChain>
           <renditionCallbackChain>javascript.fontoxml_getAssetRendition</renditionCallbackChain>
           <defaultRendition>MyCustomFontoRendition</defaultRendition>
           <renditionXPath>customschema:blobField</renditionXPath>
@@ -26,6 +29,8 @@
     get a default rendition, if it returns null, we use the XPath. Last resort, we return file:content. -->
   <extension target="com.nuxeo.fontoxml.FontoXMLService" point="configuration">
     <configuration>
+      <typeForNewXMLDocument>File</typeForNewXMLDocument>
+      <documentCreationCallbackChain></documentCreationCallbackChain>
       <renditionCallbackChain></renditionCallbackChain>
       <defaultRendition>OriginalJpeg</defaultRendition>
       <renditionXPath></renditionXPath>

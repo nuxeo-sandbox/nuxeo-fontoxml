@@ -22,11 +22,16 @@ import org.nuxeo.common.xmap.annotation.XNode;
 import org.nuxeo.common.xmap.annotation.XObject;
 
 /**
- * 
  * @since 10.10
  */
 @XObject("configuration")
 public class FontoXMLConfigDescriptor {
+    
+    @XNode("typeForNewXMLDocument")
+    protected String typeForNewXMLDocument;
+
+    @XNode("documentCreationCallbackChain")
+    protected String documentCreationCallbackChain;
 
     @XNode("renditionCallbackChain")
     protected String renditionCallbackChain;
@@ -36,15 +41,23 @@ public class FontoXMLConfigDescriptor {
 
     @XNode("renditionXPath")
     protected String renditionXPath;
+    
+    public String getTypeForNewXMLDocument() {
+        return typeForNewXMLDocument;
+    }
+
+    public String getDocumentCreationCallbackChain() {
+        return documentCreationCallbackChain;
+    }
 
     public String getRenditionCallbackChain() {
         return renditionCallbackChain;
     }
-    
+
     public String getDefaultRendition() {
         return defaultRendition;
     }
-    
+
     public String getRenditionXPath() {
         return renditionXPath;
     }
