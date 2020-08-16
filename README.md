@@ -3,7 +3,7 @@
 
 
 # Table of Content
-- [About nuxeo-fontoxml](about-nuxeo-fontoxml)
+- [About nuxeo-fontoxml](about)
 - [About the Integration - Requirements](#about-the-integration-requirements)
 - [Deployment - Displaying Fonto in the UI](#deployment-displaying-fonto-in-the-ui)
   * [Deployment of Fonto](#deployment-of-fonto)
@@ -17,8 +17,7 @@
 - [Licensing](#licensing)
 - [About Nuxeo](#about-nuxeo)
 
-<a name="about-nuxeo-fontoxml"></a>
-## About nuxeo-fontoxml
+## About
 nuxeo-fontoxml is a plugin allowing for editing XML files within Nuxeo, using the [FontoXML Editor](https://www.fontoxml.com).
 
 (Click the images for bigger display):
