@@ -3,14 +3,14 @@
 
 
 # Table of Content
-- [About nuxeo-fontoxml](about)
+- [About nuxeo-fontoxml](#about)
 - [About the Integration - Requirements](#about-the-integration-requirements)
 - [Deployment - Displaying Fonto in the UI](#deployment-displaying-fonto-in-the-ui)
   * [Deployment of Fonto](#deployment-of-fonto)
   * [Displaying Fonto in the UI](#displaying-fonto-in-the-ui)
   * [Adding Logic with an Event Handler](#adding-logic-with-an-event-handler)
   * [Tuning Log Info at Runtime](#tuning-log-info-at-runtime)
-- [Configuration](configuration)
+- [Configuration](#configuration)
 - [Features in the Context of this POC](#features-in-the-context-of-this-poc)
 - [Build-Installation](#build-Installation)
 - [Support](#support)
