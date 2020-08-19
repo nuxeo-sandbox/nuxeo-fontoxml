@@ -3,25 +3,21 @@
 
 
 # Table of Content
-- [About nuxeo-fontoxml](about-nuxeo-fontoxml)
+- [About nuxeo-fontoxml](#about)
 - [About the Integration - Requirements](#about-the-integration-requirements)
-- [Using FontoXML and this Plugin](using-fontoxml-and-this-plugin)
-- [Configuration](configuration)
-  * [Creation of a New Document](creating-a-new-document)
-  * [Rendering an Asset](rendering-an-asset) 
 - [Deployment - Displaying Fonto in the UI](#deployment-displaying-fonto-in-the-ui)
   * [Deployment of Fonto](#deployment-of-fonto)
   * [Displaying Fonto in the UI](#displaying-fonto-in-the-ui)
   * [Adding Logic with an Event Handler](#adding-logic-with-an-event-handler)
-- [Tuning Log Info at Runtime](#tuning-log-info-at-runtime)
+  * [Tuning Log Info at Runtime](#tuning-log-info-at-runtime)
+- [Configuration](#configuration)
 - [Features in the Context of this POC](#features-in-the-context-of-this-poc)
 - [Build-Installation](#build-Installation)
 - [Support](#support)
 - [Licensing](#licensing)
 - [About Nuxeo](#about-nuxeo)
 
-<a name="about-nuxeo-fontoxml"></a>
-## About nuxeo-fontoxml
+## About
 nuxeo-fontoxml is a plugin allowing for editing XML files within Nuxeo, using the [FontoXML Editor](https://www.fontoxml.com).
 
 (Click the images for bigger display):
@@ -46,117 +42,6 @@ nuxeo-fontoxml is a plugin allowing for editing XML files within Nuxeo, using th
 * This also means **the Fonto Editor does not display all and every XML** files, even if well formatted and embedding its own DTD. You will still need a distribution of Fonto handling your specific schemas.
 
 _Note_: In our POC, we tested with a distribution that includes DITA capabilities.
-
-## Using FontoXML and this Plugin
-To use it, you will follow these steps:
-
-1. Configure the plugin via an XML contribution, to tune its behavior if you want to do so
-2. Install a distribution of FontoXMl in your deployment
-3. Add the integration to FontoXML in the UI
-
-
-
-## Configuration
-
-The plugin can be configured with XML to tune its behavior when FontoXML is asking to render an asset or to create a new document from its UI (typically, a new XML or an Image)
-
-This is done via an XML contribution. The dfeault contribution is this one, we will explain the different properties below:
-
-```
-<extension target="com.nuxeo.fontoxml.FontoXMLService" point="configuration">
-  <configuration>
-    <creation>
-      <typeForNewXMLDocument>File</typeForNewXMLDocument>
-      <callbackChain></callbackChain>
-    </creation>
-    <rendition>
-      <callbackChain></callbackChain>
-      <defaultRendition>OriginalJpeg</defaultRendition>
-      <xpath></xpath>
-    </rendition>
-  </configuration>
-</extension>
-```
-
-### Creating a New Document
-
-When FontoXML sends a `POST /document` request to create a new document, the plugin will do the following:
-
-* If `callbackChain`of `creation` is not empty, it calls it to create the document. This chain:
-  * Receives the `blob` as input, and must return a `document` (the new document created from the blob)
-  * To help the chain make decision, the following parameters are passed:
-    * `mainDocId`: string, the UUID of the main document (could actually be a folder) opened in FontoXML UI.
-    * `folderId`: string, where to create. Sent by Fonto. Can be null
-    * `isAsset`: boolean, tells the chain is we are creating an XML document or an asset (Picture, typically)
-    * `docTypeForNewXML`: string, the type of document to create when `isAsset` is `false`. Read from the XML configuration, it is optional and can be null or `""`
-* If `callbackChain`of `creation` is empty or if it returned `null`, the plugin creates the new document:
-  * If it is an XML:
-    * if `typeForNewXMLDocument`is not empty, the plugin creates a document of this type
-    * Else, it uses the FileManager to create the asset from its blob
-  * Else, it uses the FileManager to create the asset from its blob
-
-
-### When FontoXML Requests to Render an Asset
-When Fonto calls `GET /asset`, it is possible to return a blob evaluated by configuration (not hard coded in the plugin). This is set in the `<rendition>` node of the XML contribution.
-
-* If `callbackChain` of `rendition` is not empty, it calls it to create the blob to return to FontoXML. This chain:
-  * Receives a `document` as input (the asset to render)
-  * and must return a `blob`
-  * It can return `null`
-* If there is no `callbackChain` defined, or if it returned `null`, we use the `defaultRendition` as the name of a rendition to use
-* If there is no `defaultRendition` name defined, or no rendition of this name in `picture:views`, we use the `xpath` to read the rendition in there.
-* If there is no `xpath` defined, or if the blob at this `xpath` is null, we give up and return `file:content`
-
-To contribute the service, create a new XML contribution in Studio, and paste/adapt the default contribution (see above)
-
-#### Example when configuring a custom rendition, using the chain `javascript.getCustomRendttion`:
-
-```
-<extension target="com.nuxeo.fontoxml.FontoXMLService" point="configuration">
-  <configuration>
-    <creation>
-      <typeForNewXMLDocument>File</typeForNewXMLDocument>
-      <callbackChain></callbackChain>
-    </creation>
-    <rendition>
-      <callbackChain>javascript.getCustomRendttion</callbackChain>
-      <defaultRendition>OriginalJpeg</defaultRendition>
-      <xpath></xpath>
-    </rendition>
-  </configuration>
-</extension>
-```
-
-* Remember the ID of a scripting automation starts with `javascript.`
-  * This chain receives the image document as input and must return a blob (or `null`)
-  * This allows for dynamically deciding what to return (maybe based on metadata)
-  * Example:
-
-```
-// input: document, output: blob
-function run(input, params) {
-  var rendition = null;
-  
-  // In this example, we use a the dc:expired field that tells us if the image rights have expired
-  // If yes, we return a precalculated watermarked rendition, else we return null and the system will
-  // get the "OriginalJpeg"
-  if(input["dc:expired"] && input["dc:expired"] > (new Date()).toISOString()) {
-    rendition = Picture.getView(input, {"vieName": "Watermarked"});
-    // If this rendition does not exist yet, lets watermark dynamically
-    // Find an example of how to watermark here: https://doc.nuxeo.com/nxdoc/how-to-contribute-picture-conversions/
-    if(!rendition ) {
-      rendition = Blob.RunConverter(
-                    input["file:content"], {
-                      "converter": "WatermarConverterToJpeg",
-                      "parameters": "targetFileName="copyrighted.jpeg"
-                   });
-    }
-  }
-  
-  // If null, the service will get the defaultRendition
-  return rendition;
-}
-```
 
 
 <a name="deployment-displaying-fonto-in-the-ui"></a>
@@ -260,7 +145,7 @@ You can catch this event and add more logic if you need to do so:
   * Create an Event Handler that listens to this event and runs an Automation chain (regular or JavaScript automation).
   * Notice: In automation, the input will be the document. If you want to check the autosave flag, in Automation Scriptin you can check `if(input.getDoc().getContextData("isFontoAutoSave"))) ...`
 
-## Tuning Log Info at Runtime
+### Tuning Log Info at Runtime
 The plugin writes some warnings in server.log when needed. For more informations you can activate the info level in the Log4j configuration. This will log more details (like the request received, the parameters, etc.). In order to do so:
 
 * On your server, modify the `log4j2.xml` file, at `{Nuxeo Home}/lib`
@@ -274,6 +159,70 @@ The plugin writes some warnings in server.log when needed. For more informations
   * Save
 * No need to restart the server, changes in `log4j2.xml` are handled dynamically
 * Which means, you also can change the `level` back to `"warn"` when you don't need the info anymore (no need to restart Nuxeo)
+
+## Configuration
+
+When Fonto calls `GET /asset`, it is possible to return a blob evaluated by configuration (not hard coded in the plugin).
+
+An XML contribution can be added to dynamically decide which blob to return:
+
+* It can be returned by an Automation Chain that is called back by the service
+* If there is no chain defined, or it returned `null`, we use the name of a rendition
+* If there is no rendition name defined, or no rendition of this name in `picture:views`, we use an xpath
+* If there is no xpath defined, or if the blob at this xpath is null, we give up and return `file:content`
+
+To contribute the service, create a new XML contribution in Studio, and paste/adapt the following, which is the default contribution:
+
+```
+<extension target="com.nuxeo.fontoxml.FontoXMLService" point="configuration">
+  <configuration>
+    <renditionCallbackChain></renditionCallbackChain>
+    <defaultRendition>OriginalJpeg</defaultRendition>
+    <renditionXPath></renditionXPath>
+  </configuration>
+</extension>
+```
+
+* In `renditionCallbackChain`, set the ID of an automation chain
+  * Optional. Default value is `""` (no chain)
+  * Remember the ID of a scripting automation starts with `javascript.`
+  * This chain receives the image document as input and must return a blob (or `null`)
+  * This allows for dynamically deciding what to return (maybe based on metadata)
+  * Example:
+
+```
+// input: document, output: blob
+function run(input, params) {
+  var rendition = null;
+  
+  // In this example, we use a the dc:expired field that tells us if the image rights have expired
+  // If yes, we return a precalculated watermarked rendition, else we return null and the system will
+  // get the "OriginalJpeg"
+  if(input["dc:expired"] && input["dc:expired"] > (new Date()).toISOString()) {
+    rendition = Picture.getView(input, {"vieName": "Watermarked"});
+    // If this rendition does not exist yet, lets watermark dynamically
+    // Find an example of how to watermark here: https://doc.nuxeo.com/nxdoc/how-to-contribute-picture-conversions/
+    if(!rendition ) {
+      rendition = Blob.RunConverter(
+                    input["file:content"], {
+                      "converter": "WatermarConverterToJpeg",
+                      "parameters": "targetFileName="copyrighted.jpeg"
+                   });
+    }
+  }
+  
+  // If null, the service will get the defaultRendition
+  return rendition;
+}
+```
+
+* In `defaultRendition`, set the name of a rendition
+  * Optional. Default value is "OriginalJpeg"
+  * This is the `title` of a rendition in the `picture:views` field
+
+* In `xpath`, put the xpath of a field holding the blob to use for the asset
+
+
 
 ## Features in the Context of this POC
 Now, a not-really-started, not-finished :-) and _unordered_ list of items in the context of this POC
