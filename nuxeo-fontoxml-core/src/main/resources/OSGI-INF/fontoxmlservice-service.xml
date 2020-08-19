@@ -10,30 +10,46 @@
   <extension-point name="configuration">
     <documentation>
       Important: See Javadoc for com.nuxeo.fontoxml.FontoXMLService for explanation and details about the call back
-      operation chains.
+      operation chains and the misc. priorities and order of processing when an element is null.
+
+      Example
       <code>
         <configuration>
-          <!-- no typeFormNewXMLDocument means the service will call the FileManager -->
-          <typeForNewXMLDocument></typeForNewXMLDocument>
-          <documentCreationCallbackChain>javascript.fontoxml_createDocument</documentCreationCallbackChain>
-          <renditionCallbackChain>javascript.fontoxml_getAssetRendition</renditionCallbackChain>
-          <defaultRendition>MyCustomFontoRendition</defaultRendition>
-          <renditionXPath>customschema:blobField</renditionXPath>
+          <creation>
+            <!-- The chain will create the document -->
+            <callbackChain>javascript.DocumentCreationFromXMLBlobForFonto</callbackChain>
+            <!-- If the no chain or it returned null, this Document type will be used -->
+            <typeForNewXMLDocument>File</typeForNewXMLDocument>
+            <!-- If the chain did not create a doc and there is no default type, we call the FileManage -->
+          </creation>
+
+          <rendition>
+            <!-- Chain ID that returns the rendition; Can be empty. -->
+            <callbackChain>javascript.SomeRenditionForFonto</callbackChain>
+            <!-- If no chain or it returned null, we use this rendition -->
+            <defaultRendition>NameOfACustomRenditionForFonto</defaultRendition>
+            <!-- If no chain, no rendition, we use the xpath -->
+            <xpath>customschema:blobField</xpath>
+            <!-- If no chain, no rendition, no xpath: we will return file:content -->
+          </rendition>
         </configuration>
       </code>
     </documentation>
     <object class="com.nuxeo.fontoxml.FontoXMLConfigDescriptor" />
   </extension-point>
 
-  <!-- See the doc. There are priorities. first we run the chain (input: document, output: blob), if it returns null, we 
-    get a default rendition, if it returns null, we use the XPath. Last resort, we return file:content. -->
+  <!-- Default configuration -->
   <extension target="com.nuxeo.fontoxml.FontoXMLService" point="configuration">
     <configuration>
-      <typeForNewXMLDocument>File</typeForNewXMLDocument>
-      <documentCreationCallbackChain></documentCreationCallbackChain>
-      <renditionCallbackChain></renditionCallbackChain>
-      <defaultRendition>OriginalJpeg</defaultRendition>
-      <renditionXPath></renditionXPath>
+      <creation>
+        <typeForNewXMLDocument>File</typeForNewXMLDocument>
+        <callbackChain></callbackChain>
+      </creation>
+      <rendition>
+        <callbackChain></callbackChain>
+        <defaultRendition>OriginalJpeg</defaultRendition>
+        <xpath></xpath>
+      </rendition>
     </configuration>
   </extension>
 

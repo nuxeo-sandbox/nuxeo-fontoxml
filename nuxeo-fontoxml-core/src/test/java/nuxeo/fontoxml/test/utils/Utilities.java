@@ -78,13 +78,28 @@ public class Utilities {
 
         return doc;
     }
+    
+    public static DocumentModel createDocWithEmptyStringBlob(CoreSession session, String blobMimeType) {
+        
+        DocumentModel doc = session.createDocumentModel("/", "test", "File");
+        doc.setPropertyValue("dc:title", "Test Doc");
+        if(blobMimeType == null) {
+            blobMimeType = "text/plain";
+        }
+        Blob dummyBlob = Blobs.createBlob("", blobMimeType);
+        doc.setPropertyValue("file:content", (Serializable) dummyBlob);
+
+        doc = session.createDocument(doc);
+        session.save();
+        
+        return doc;
+    }
 
     public static DocumentModel createTestDoc(CoreSession session, boolean withBlob) {
         return Utilities.createTestDoc(session, withBlob, null);
     }
 
     public static void waitForAsyncWorkAndStartTransaction(CoreSession session) {
-
 
         session.save();
 

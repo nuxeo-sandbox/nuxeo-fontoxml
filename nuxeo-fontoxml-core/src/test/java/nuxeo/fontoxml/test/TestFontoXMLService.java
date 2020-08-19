@@ -20,11 +20,13 @@ package nuxeo.fontoxml.test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.Serializable;
 
 import javax.inject.Inject;
 
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -84,6 +86,8 @@ public class TestFontoXMLService {
         assertNotNull(config);
 
         // See values in get-asset-rendition-from-automation.xml
+        assertEquals("File", config.getTypeForNewXMLDocument());
+        assertTrue(StringUtils.isBlank(config.getDocumentCreationCallbackChain()));
         assertEquals("javascript.testGetRendition", config.getRenditionCallbackChain());
         assertEquals("Small", config.getDefaultRendition());
         assertEquals("thumb:thumbnail", config.getRenditionXPath());

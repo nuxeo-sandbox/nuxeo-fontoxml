@@ -6,6 +6,42 @@ import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 
+/**
+ * This service uses the <code>FontoXMLConfigDescriptor</code> to make decisions when creating a new document or
+ * rendering an asset, etc. See fontoxmlservice-service.xml
+ * <br />
+ * When <b>creating a new document</b> (XML or media - usually an image), we use the "creation" node of the
+ * configuration.
+ * <ul>
+ * <li>A chain can be called (callbackChain). It receives some parameters and can create the document.<br />
+ * The parameters are:
+ * <ul>
+ * <li>mainDocId: string, the UUID of the main document (could actually be a folder) opened in FontoXML UI.</li>
+ * <li>folderId: string, where to create. Sent by Fonto. Can be null</li>
+ * <li>isAsset: boolean, tells the chain is we are creating an XML document or an asset (Picture, typically)</li>
+ * <li>docTypeForNewXML: string, the type of document to create when isAsset is false. Optional, can be null</li>
+ * </ul>
+ * </li>
+ * <li>If there is no callbackChain or it returned null, we create the document:
+ * <ul>
+ * <li>If it is XML, we use the typeForNewXMLDocument config to create this doc type. If not set, we use the
+ * FileManager</li>
+ * <li>Else, we use the FileManager to create the document from the blob</li>
+ * </ul>
+ * </li>
+ * </ul>
+ * <br />
+ * When <b>rendering a document</b> (an image), we use the "rendition" node of the configuration:
+ * <ul>
+ * <li>If there is callbackChain => we call it => returns the rendition as blob, or null</li>
+ * <li>If there is no callbackChain or it returned null, then we use the defaultRendition</li>
+ * <li>If it is still null at this step, then we use the xpath configuration parameter</li>
+ * <li>If it is still null at this step, we return file:content</li>
+ * <li></li>
+ * </ul>
+ * 
+ * @since 10.10
+ */
 public interface FontoXMLService {
 
     public static final String CHAIN_PARAM_DOCTYPE_FOR_XML = "docTypeForNewXML";
@@ -26,14 +62,8 @@ public interface FontoXMLService {
      * <br />
      * IMPORTANT : The blob is assumed to have a correct mime-type but can have no filename
      * <br />
-     * The service should handle the documentCreationCallbackChain configuration if any and call the chain, passing it 3
-     * parameters:
-     * <ul>
-     * <li>mainDocId: string, the UUID of the main document (can actually be a folder)</li>
-     * <li>folderId: string, where to create. Can be null</li>
-     * <li>isAsset: boolean, must be set to <code>false</code> in this createDocument()</li>
-     * <li>docTypeForNewXML: string, the type of document to create when isAsset is false. Optional, can be null</li>
-     * <ul>
+     * The service should handle the documentCreationCallbackChain configuration if any and pass it the expected
+     * parameters defined above (it will pas the <code>isAsset</code> parameter to <code>false</code>)
      * The chain can return null. In this case default behavior using folder and/or mainDoc should be used.
      * 
      * @param session
@@ -56,13 +86,8 @@ public interface FontoXMLService {
      * <br />
      * IMPORTANT : The blob is assumed to have a correct mime-type and a filename
      * <br />
-     * The service should handle the documentCreationCallbackChain configuration if any and call the chain, passing it 3
-     * parameters:
-     * <ul>
-     * <li>mainDocId, string, the UUID of the main document (can actually be a folder)</li>
-     * <li>folderId: string, where to create. Can be null</li>
-     * <li>isAsset: boolean, must be set to <code>true</code> in this createDocument()</li>
-     * <ul>
+     * The service should handle the documentCreationCallbackChain configuration if any and pass it the expected
+     * parameters defined above (it will pas the <code>isAsset</code> parameter to <code>true</code>)
      * The chain can return null. In this case default behavior using folder and/or mainDoc should be used.
      * 
      * @param session

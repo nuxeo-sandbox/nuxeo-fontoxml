@@ -267,18 +267,18 @@ public class FontoXMLServlet extends HttpServlet {
                 DocumentModel doc = session.getDocument(docRef);
                 Blob blob = (Blob) doc.getPropertyValue("file:content");
                 if (blob == null) {
-                    log.warn("No blob");
+                    log.warn(doc.getTitle() + "/" + docId + " has no blob");
                     resp.sendError(HttpServletResponse.SC_NOT_FOUND, "This document has no blob");
                     return;
                 }
 
-                if (!StringUtils.equals(MIME_TYPE_XML, blob.getMimeType())) {
-                    log.warn("Not an XML blob");
-                    resp.sendError(HttpServletResponse.SC_NOT_FOUND, "This document contains no XML");
+                if (!Utilities.canGetString(blob)) {
+                    log.warn(doc.getTitle() + "/" + docId + " => Not a text-based blob");
+                    resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Not a text-based blob");
                     return;
                 }
 
-                String xml = blob.getString();
+                String blobStr = blob.getString();
                 // log.warn("blob.getString => \n" + xml);
 
                 // Build the response
@@ -286,7 +286,7 @@ public class FontoXMLServlet extends HttpServlet {
                 // - Required: Doc Id
                 responseJson.put(PARAM_DOC_ID, docId);
                 // - Required: XML content
-                responseJson.put(PARAM_CONTENT, xml);
+                responseJson.put(PARAM_CONTENT, blobStr);
                 // - Required: Lock info
                 JSONObject lock = getLockInfoForFonto(doc);
                 responseJson.put(PARAM_LOCK, lock);

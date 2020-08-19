@@ -5,11 +5,17 @@
   <require>com.nuxeo.fontoxml.FontoXMLService</require>
   <extension target="com.nuxeo.fontoxml.FontoXMLService" point="configuration">
     <configuration>
-      <renditionCallbackChain>javascript.testGetRendition</renditionCallbackChain>
-      <!-- If the chain returns null -->
-      <defaultRendition>Small</defaultRendition>
-      <!-- If the default rendition is not found. No default xpath here -->
-      <renditionXPath>thumb:thumbnail</renditionXPath>
+      <creation>
+        <typeForNewXMLDocument>File</typeForNewXMLDocument>
+        <callbackChain></callbackChain>
+      </creation>
+      <rendition>
+        <callbackChain>javascript.testGetRendition</callbackChain>
+        <!-- If the chain returns null -->
+        <defaultRendition>Small</defaultRendition>
+        <!-- If the default rendition is not found. No default xpath here -->
+        <xpath>thumb:thumbnail</xpath>
+      </rendition>
     </configuration>
   </extension>
 

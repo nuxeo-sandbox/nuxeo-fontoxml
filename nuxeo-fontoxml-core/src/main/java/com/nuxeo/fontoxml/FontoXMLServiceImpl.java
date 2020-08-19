@@ -26,6 +26,7 @@ import org.nuxeo.runtime.model.ComponentInstance;
 import org.nuxeo.runtime.model.DefaultComponent;
 
 import com.nuxeo.fontoxml.servlet.Constants;
+import com.nuxeo.fontoxml.servlet.Utilities;
 
 public class FontoXMLServiceImpl extends DefaultComponent implements FontoXMLService {
 
@@ -101,18 +102,7 @@ public class FontoXMLServiceImpl extends DefaultComponent implements FontoXMLSer
 
         // Ultimate check, in case someone did not set the mimetype
         if (blob != null && blob.getMimeType() == null) {
-            String mimeType = null;
-
-            MimetypeRegistry mimeRegistry = Framework.getService(MimetypeRegistry.class);
-            try {
-                mimeType = mimeRegistry.getMimetypeFromBlob(blob);
-            } catch (MimetypeNotFoundException | MimetypeDetectionException e1) {
-                try {
-                    mimeType = mimeRegistry.getMimetypeFromFile(blob.getFile());
-                } catch (MimetypeNotFoundException | MimetypeDetectionException e2) {
-                    throw new NuxeoException("Cannot get a Mime Type from the blob or the file", e2);
-                }
-            }
+            String mimeType = Utilities.getBlobMimeType(blob);
             blob.setMimeType(mimeType);
         }
 
@@ -168,27 +158,29 @@ public class FontoXMLServiceImpl extends DefaultComponent implements FontoXMLSer
             // We must giveup...
             throw new NuxeoException("Cannot find a container for the new document");
         }
-
-        // Use the filemanager so a plugin can decide which type of document to create
-        FileManager fileManager = Framework.getService(FileManager.class);
-
-        if (content.getFilename() == null) {
-            if (Constants.MIME_TYPE_XML.equals(content.getMimeType())) {
-
+        
+        if(!isAsset) {
+            // Then, it is an XML document
+            if (content.getFilename() == null) {
                 PlatformFunctions pf = new PlatformFunctions();
                 String fileName = "XML-Doc-" + pf.getNextId("FontoPostDocument") + ".xml";
                 content.setFilename(fileName);
-            } else {
-                // It is not normal that we don'gt have a file name for other mime type (creating "asset")
-                throw new NuxeoException("Blob has no filename???");
             }
         }
 
-        FileImporterContext context = FileImporterContext.builder(session, content, container.getPathAsString())
-                                                         .overwrite(true)
-                                                         .fileName(content.getFilename())
-                                                         .build();
-        doc = fileManager.createOrUpdateDocument(context);
+        if(isAsset || xmlDocType == null) {
+            // Use the filemanager so a plugin can decide which type of document to create
+            FileManager fileManager = Framework.getService(FileManager.class);
+            
+    
+            FileImporterContext context = FileImporterContext.builder(session, content, container.getPathAsString())
+                                                             .overwrite(true)
+                                                             .fileName(content.getFilename())
+                                                             .build();
+            doc = fileManager.createOrUpdateDocument(context);
+        } else {
+            
+        }
 
         return doc;
     }

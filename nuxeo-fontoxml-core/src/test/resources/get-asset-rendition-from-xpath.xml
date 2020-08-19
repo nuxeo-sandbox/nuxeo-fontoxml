@@ -5,9 +5,15 @@
   <require>com.nuxeo.fontoxml.FontoXMLService</require>
   <extension target="com.nuxeo.fontoxml.FontoXMLService" point="configuration">
     <configuration>
-      <renditionCallbackChain></renditionCallbackChain>
-      <defaultRendition></defaultRendition>
-      <renditionXPath>thumb:thumbnail</renditionXPath>
+      <creation>
+        <typeForNewXMLDocument>File</typeForNewXMLDocument>
+        <callbackChain></callbackChain>
+      </creation>
+      <rendition>
+        <callbackChain></callbackChain>
+        <defaultRendition></defaultRendition>
+        <xpath>thumb:thumbnail</xpath>
+      </rendition>
     </configuration>
   </extension>
 

@@ -27,39 +27,55 @@ import org.nuxeo.common.xmap.annotation.XObject;
 @XObject("configuration")
 public class FontoXMLConfigDescriptor {
     
-    @XNode("typeForNewXMLDocument")
-    protected String typeForNewXMLDocument;
+    @XObject("creation")
+    protected static class CreationDescriptor{
 
-    @XNode("documentCreationCallbackChain")
-    protected String documentCreationCallbackChain;
+        @XNode("callbackChain")
+        protected String callbackChain;
 
-    @XNode("renditionCallbackChain")
-    protected String renditionCallbackChain;
+        @XNode("typeForNewXMLDocument")
+        protected String typeForNewXMLDocument;
+        
+    }
+    
+    @XObject("rendition")
+    protected static class RenditionDescriptor{
 
-    @XNode("defaultRendition")
-    protected String defaultRendition;
+        @XNode("callbackChain")
+        protected String callbackChain;
 
-    @XNode("renditionXPath")
-    protected String renditionXPath;
+        @XNode("defaultRendition")
+        protected String defaultRendition;
+
+        @XNode("xpath")
+        protected String xpath;
+        
+    }
+    
+    @XNode(value="creation")
+    protected CreationDescriptor creationDescriptor = new CreationDescriptor();
+    
+    @XNode(value="rendition")
+    protected RenditionDescriptor renditionDescriptor = new RenditionDescriptor();
     
     public String getTypeForNewXMLDocument() {
-        return typeForNewXMLDocument;
+        return creationDescriptor.typeForNewXMLDocument;
     }
 
     public String getDocumentCreationCallbackChain() {
-        return documentCreationCallbackChain;
+        return creationDescriptor.callbackChain;
     }
 
     public String getRenditionCallbackChain() {
-        return renditionCallbackChain;
+        return renditionDescriptor.callbackChain;
     }
 
     public String getDefaultRendition() {
-        return defaultRendition;
+        return renditionDescriptor.defaultRendition;
     }
 
     public String getRenditionXPath() {
-        return renditionXPath;
+        return renditionDescriptor.xpath;
     }
 
 }

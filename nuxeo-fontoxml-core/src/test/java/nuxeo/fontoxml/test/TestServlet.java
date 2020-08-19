@@ -153,14 +153,14 @@ public class TestServlet extends MockedServlet {
     }
 
     @Test
-    public void testGetDocumentFailsWithNoXml() throws Exception {
+    public void testGetDocumentFailsWhenNoText() throws Exception {
 
-        DocumentModel doc = Utilities.createTestDoc(session, true, "text/plain");
+        DocumentModel doc = Utilities.createDocWithEmptyStringBlob(session, "image/jpeg");
 
         Map<String, String> params = ImmutableMap.of(Constants.PARAM_DOC_ID, doc.getId());
         run("GET", Constants.PATH_DOCUMENT, params);
 
-        verify(mockResponse).sendError(HttpServletResponse.SC_NOT_FOUND, "This document contains no XML");
+        verify(mockResponse).sendError(HttpServletResponse.SC_NOT_FOUND, "Not a text-based blob");
 
     }
 
