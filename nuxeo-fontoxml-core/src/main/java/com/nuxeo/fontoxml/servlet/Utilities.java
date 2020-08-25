@@ -64,8 +64,8 @@ public class Utilities {
                 throw new NuxeoException("Cannot get a Mime Type from the blob or the file", e2);
             }
         }
-        
-        if(setIfEmpty) {
+
+        if (setIfEmpty) {
             blob.setMimeType(mimeType);
         }
 
@@ -122,9 +122,9 @@ public class Utilities {
     }
 
     /**
-     * Checks if the blob can be fetched by fonto later, whenj calling GET /document
+     * Checks if the blob can be fetched by fonto later, when calling GET /document
      * This depends on the fonto distribution used
-     * TODO improve the service to adapt to the Fonto disctibution (F4B, DITA, ...)
+     * TODO improve the service to adapt to the Fonto distribution (F4B, DITA, ...)
      * 
      * @param blob
      * @return true is the blob can be fetched by Fonto using GET /document
@@ -137,14 +137,41 @@ public class Utilities {
         }
 
         String fileName = blob.getFilename();
-        for (String fileExt : Constants.FONTO_DOCUMENT_FILE_EXTENSIONS) {
-            if (fileName.endsWith(fileExt)) {
-                return true;
+        if (fileName != null) {
+            for (String fileExt : Constants.FONTO_DOCUMENT_FILE_EXTENSIONS) {
+                if (fileName.endsWith(fileExt)) {
+                    return true;
+                }
             }
         }
 
         // Last, if it's XML, then return true
         return Utilities.looksLikeXml(blob);
+    }
+
+    /**
+     * Only for F4D.
+     * 
+     * @param blob
+     * @return true is the blob can be fetched by Fonto using PÖST /browse and assetType "output-support"
+     * @since 10.10
+     */
+    public static boolean isOkForFontoPOSTBrowseOutputSupport(Blob blob) {
+
+        if (!Utilities.canGetString(blob)) {
+            return false;
+        }
+
+        String fileName = blob.getFilename();
+        if (fileName != null) {
+            for (String fileExt : Constants.FONTO_OUTPUTSUPPORT_FILE_EXTENSIONS) {
+                if (fileName.endsWith(fileExt)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
 }

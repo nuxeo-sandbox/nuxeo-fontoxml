@@ -128,17 +128,26 @@ public class Constants {
 
     public static final String FONTO_TYPE_UNKNOWN = "unknown";
 
-    // ========================================> FONTO FILE EXTENSIONS
+    public static final String FONTO_TYPE_OUTPUT_SUPPORT = "output-support";
+
+    // ========================================> FONTO FILE EXTENSIONS AND FILTERS DURING BROWSE
     public static final String FONTO_FILE_EXT_SETTINGS = ".setting.html";
 
-    public static final String FONTO_FILE_EXT_TEMPLATE = ".template.html,";
+    public static final String FONTO_FILE_EXT_TEMPLATE = ".template.html";
 
-    public static final String FONTO_FILE_EXT_FRAGMENT = ".fragment.html,";
+    public static final String FONTO_FILE_EXT_FRAGMENT = ".fragment.html";
 
-    public static final String FONTO_FILE_EXT_DOCUMENT = ".document.html,";
+    public static final String FONTO_FILE_EXT_DOCUMENT = ".document.html";
 
     public static final List<String> FONTO_DOCUMENT_FILE_EXTENSIONS = Arrays.asList(FONTO_FILE_EXT_SETTINGS,
             FONTO_FILE_EXT_TEMPLATE, FONTO_FILE_EXT_FRAGMENT, FONTO_FILE_EXT_DOCUMENT);
+
+    public static final String FONTO_FILE_EXT_CSS = ".css";
+
+    public static final String FONTO_FILE_EXT_HEADERFOOTER = ".hf.html";
+
+    public static final List<String> FONTO_OUTPUTSUPPORT_FILE_EXTENSIONS = Arrays.asList(FONTO_FILE_EXT_CSS,
+            FONTO_FILE_EXT_HEADERFOOTER);
 
     // ========================================> CUSTOM INFO SEND (in context, mainly)
     public static final String DOC_UUID = "uuid";

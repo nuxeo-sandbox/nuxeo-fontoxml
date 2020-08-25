@@ -227,6 +227,12 @@ public class DocumentBrowser {
                                 if (Utilities.isOkForFontoGETDocument(blob)) {
                                     gotOne = true;
                                 }
+                            } else if (assetTypesList.contains(FONTO_TYPE_OUTPUT_SUPPORT)) {
+                                // Fonto 4 Business doc: "This is a browse request for files that are used during the
+                                // construction of an output file. The CMS must filter on *.css and *.hf.html files."
+                                if (Utilities.isOkForFontoPOSTBrowseOutputSupport(blob)) {
+                                    gotOne = true;
+                                }
                             }
                             break;
 
