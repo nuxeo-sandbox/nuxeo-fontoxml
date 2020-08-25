@@ -222,8 +222,9 @@ public class DocumentBrowser {
                             if (assetTypesList.contains(FONTO_TYPE_FILE)) {
                                 gotOne = true;
                             } else if (assetTypesList.contains(FONTO_TYPE_DOCUMENT)) {
-                                // A "document" is an XML that Fonto can display
-                                if (blob.getMimeType().equals(MIME_TYPE_XML)) {
+                                // Fonto 4 Business doc: "The results must be filtered to only return documents that can
+                                // be previewed with the ​GET /document​ endpoint"
+                                if (Utilities.isOkForFontoGETDocument(blob)) {
                                     gotOne = true;
                                 }
                             }

@@ -34,7 +34,7 @@ public class TestServletUtilities {
         File f = FileUtils.getResourceFileFromContext("home_bg.jpg");
         Blob blob = Blobs.createBlob(f);
         
-        String mimeType = Utilities.getBlobMimeType(blob);
+        String mimeType = Utilities.getBlobMimeType(blob, false);
         assertEquals("image/jpeg", mimeType);
         
         // ------------------------------
@@ -42,7 +42,7 @@ public class TestServletUtilities {
         f = FileUtils.getResourceFileFromContext("listener-docModifiedByFonto.xml");
         blob = Blobs.createBlob(f);
         
-        mimeType = Utilities.getBlobMimeType(blob);
+        mimeType = Utilities.getBlobMimeType(blob, false);
         assertEquals("text/xml", mimeType);
         
     }

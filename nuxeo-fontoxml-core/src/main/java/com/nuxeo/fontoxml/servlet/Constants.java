@@ -18,6 +18,9 @@
  */
 package com.nuxeo.fontoxml.servlet;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * Centralize misc. constants, including the names of parameters/properties/query parameters as provided/expected by
  * Fonto
@@ -26,17 +29,17 @@ package com.nuxeo.fontoxml.servlet;
  */
 public class Constants {
 
- // ========================================> Misc. constants
+    // ========================================> Misc. constants
     // If you change this, also change in the the misc. resources
     public static final String FONTO_PATH_NAME = "fontoxml";
 
     public static final String MIME_TYPE_XML = "text/xml";
-    
+
     public static final String EVENT_DOC_MODIFIED_BY_FONTOWML = "documentModifiedByFontoXML";
-    
+
     public static final String EVENT_CONTEXT_IS_AUTOSAVE = "isFontoAutoSave";
 
-    // ========================================> FONT END POINTS
+    // ========================================> FONTO END POINTS
     public static final String PATH_DOCUMENT = "/document";
 
     public static final String PATH_DOCUMENT_STATE = "/document/state";
@@ -53,7 +56,7 @@ public class Constants {
 
     // ========================================> FONTO PROPERTIES/PARAMETERS/...
     public static final String PARAM_CONTEXT = "context";
-    
+
     public static final String PARAM_EDIT_SESSION_TOKEN = "editSessionToken";
 
     public static final String PARAM_DOC_ID = "documentId";
@@ -95,10 +98,16 @@ public class Constants {
     public static final String PARAM_FOLDER_ID = "folderId";
 
     public static final String PARAM_LABEL = "label";
-    
+
     public static final String VARIANT_THUMBNAIL = "thumbnail";
-    
+
     public static final String VARIANT_WEB = "web";
+
+    // ========================================> CREATING DOCUMENTS FROM FONTO
+    // In the PARAM_METADATA object
+    public static final String PARAM_FILE_NAME = "fileName";
+
+    public static final String PARAM_FILE_EXTENSION = "fileExtension";
 
     // ========================================> FONTO TYPES
     public static final String FONTO_TYPE_DOCUMENT = "document";
@@ -119,9 +128,21 @@ public class Constants {
 
     public static final String FONTO_TYPE_UNKNOWN = "unknown";
 
+    // ========================================> FONTO FILE EXTENSIONS
+    public static final String FONTO_FILE_EXT_SETTINGS = ".setting.html";
+
+    public static final String FONTO_FILE_EXT_TEMPLATE = ".template.html,";
+
+    public static final String FONTO_FILE_EXT_FRAGMENT = ".fragment.html,";
+
+    public static final String FONTO_FILE_EXT_DOCUMENT = ".document.html,";
+
+    public static final List<String> FONTO_DOCUMENT_FILE_EXTENSIONS = Arrays.asList(FONTO_FILE_EXT_SETTINGS,
+            FONTO_FILE_EXT_TEMPLATE, FONTO_FILE_EXT_FRAGMENT, FONTO_FILE_EXT_DOCUMENT);
+
     // ========================================> CUSTOM INFO SEND (in context, mainly)
     public static final String DOC_UUID = "uuid";
-    
+
     public static final String DOC_TYPE = "type";
 
     public static final String DOC_STATE = "state";

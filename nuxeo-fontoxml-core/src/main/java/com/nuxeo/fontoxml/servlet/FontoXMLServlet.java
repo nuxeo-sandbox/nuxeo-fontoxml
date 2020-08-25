@@ -31,6 +31,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
@@ -464,7 +465,7 @@ public class FontoXMLServlet extends HttpServlet {
                 DocumentModel mainDoc = null;
                 DocumentModel folder = null;
                 
-                EditSessionToken esToken = new EditSessionToken(context.getJSONObject(PARAM_EDIT_SESSION_TOKEN));
+                EditSessionToken esToken = new EditSessionToken(context.getString(PARAM_EDIT_SESSION_TOKEN));
                 mainDoc = esToken.getMainDocument(session);
                 
                 if (StringUtils.isNotBlank(folderId)) {
@@ -474,10 +475,28 @@ public class FontoXMLServlet extends HttpServlet {
                     }
                 }
                 
-                DocumentModel newDoc = null;
-                Blob blob = Blobs.createBlob(content, MIME_TYPE_XML);
+                Blob blob = Blobs.createBlob(content);
+                if(metadata != null) {
+                    String fileName = metadata.optString(PARAM_FILE_NAME);
+                    String fileExtension = metadata.optString(PARAM_FILE_EXTENSION);
+                    if(StringUtils.isNotBlank(fileName) && StringUtils.isNotBlank(fileExtension)) {
+                        if(!fileExtension.startsWith(".")) {
+                            fileName += ".";
+                        }
+                        fileName += fileExtension;
+                    }
+                    blob.setFilename(fileName);
+                    // Update the mime-type
+                    Utilities.getBlobMimeType(blob, true);
+                }
+                
+                // Ultimate check, in case someone did not set the mimetype
+                if (blob.getMimeType() == null) {
+                    Utilities.getBlobMimeType(blob, true);
+                }
+                
                 FontoXMLService fontoService = Framework.getService(FontoXMLService.class);
-                newDoc = fontoService.createDocument(session, blob, mainDoc, folder);
+                DocumentModel newDoc = fontoService.createDocument(session, blob, mainDoc, folder);
 
                 JSONObject responseJson = new JSONObject();
                 responseJson.put(PARAM_DOC_ID, newDoc.getId());

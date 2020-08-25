@@ -89,6 +89,8 @@ When FontoXML sends a `POST /document` request to create a new document, the plu
     * `folderId`: string, where to create. Sent by Fonto. Can be null
     * `isAsset`: boolean, tells the chain is we are creating an XML document or an asset (Picture, typically)
     * `docTypeForNewXML`: string, the type of document to create when `isAsset` is `false`. Read from the XML configuration, it is optional and can be null or `""`
+  * Also, the input blob has its file name set. The document can be created using it (in JS Automation, you will use `input.getFilename()`)
+
 * If `callbackChain`of `creation` is empty or if it returned `null`, the plugin creates the new document:
   * If it is an XML:
     * if `typeForNewXMLDocument`is not empty, the plugin creates a document of this type
@@ -284,6 +286,7 @@ Now, a not-really-started, not-finished :-) and _unordered_ list of items in the
   * `GET /asset`
   * `GET /asset/preview`
   * `GET /heartbeat`
+  * `POST /document`
   * `POST /browse`
   * `POST /asset`
   * `POST /document/state`

@@ -102,8 +102,7 @@ public class FontoXMLServiceImpl extends DefaultComponent implements FontoXMLSer
 
         // Ultimate check, in case someone did not set the mimetype
         if (blob != null && blob.getMimeType() == null) {
-            String mimeType = Utilities.getBlobMimeType(blob);
-            blob.setMimeType(mimeType);
+            String mimeType = Utilities.getBlobMimeType(blob, true);
         }
 
         return blob;
@@ -136,7 +135,12 @@ public class FontoXMLServiceImpl extends DefaultComponent implements FontoXMLSer
             }
 
             try {
+                
                 doc = (DocumentModel) as.run(octx, chainId, parameters);
+                // ====================
+                return doc;
+                // ====================
+                
             } catch (OperationException e) {
                 throw new NuxeoException("Failed to run the " + chainId + " callback chain", e);
             }
@@ -144,18 +148,18 @@ public class FontoXMLServiceImpl extends DefaultComponent implements FontoXMLSer
 
         // 2. Use the suggested folder
         DocumentModel container = null;
-        if (doc == null && folder != null) {
+        if (folder != null) {
             container = folder;
         }
         if (container == null && mainDoc != null) {
             if (mainDoc.isFolder()) {
                 container = mainDoc;
             } else {
-                container = session.getParentDocument(doc.getParentRef());
+                container = session.getParentDocument(mainDoc.getParentRef());
             }
         }
         if (container == null) {
-            // We must giveup...
+            // We must give up...
             throw new NuxeoException("Cannot find a container for the new document");
         }
         
@@ -167,19 +171,24 @@ public class FontoXMLServiceImpl extends DefaultComponent implements FontoXMLSer
                 content.setFilename(fileName);
             }
         }
+        
+        String fileName = content.getFilename();
 
-        if(isAsset || xmlDocType == null) {
+        if(isAsset || StringUtils.isBlank(xmlDocType)) {
             // Use the filemanager so a plugin can decide which type of document to create
             FileManager fileManager = Framework.getService(FileManager.class);
             
-    
             FileImporterContext context = FileImporterContext.builder(session, content, container.getPathAsString())
                                                              .overwrite(true)
-                                                             .fileName(content.getFilename())
+                                                             .fileName(fileName)
                                                              .build();
             doc = fileManager.createOrUpdateDocument(context);
         } else {
-            
+            doc = session.createDocumentModel(container.getPathAsString(), fileName, xmlDocType);
+            doc.setPropertyValue("dc:title", fileName);
+            doc.setPropertyValue("file:content", (Serializable) content);
+            doc = session.createDocument(doc);
+            session.save();
         }
 
         return doc;
