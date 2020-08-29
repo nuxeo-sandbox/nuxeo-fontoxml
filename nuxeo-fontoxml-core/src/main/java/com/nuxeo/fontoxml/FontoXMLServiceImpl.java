@@ -117,7 +117,7 @@ public class FontoXMLServiceImpl extends DefaultComponent implements FontoXMLSer
             // That's not normal
             throw new NuxeoException("No XML configuration loaded");
         }
-        
+
         String xmlDocType = config.getTypeForNewXMLDocument();
 
         // 1. Use a chain
@@ -135,12 +135,12 @@ public class FontoXMLServiceImpl extends DefaultComponent implements FontoXMLSer
             }
 
             try {
-                
+
                 doc = (DocumentModel) as.run(octx, chainId, parameters);
                 // ====================
                 return doc;
                 // ====================
-                
+
             } catch (OperationException e) {
                 throw new NuxeoException("Failed to run the " + chainId + " callback chain", e);
             }
@@ -162,8 +162,8 @@ public class FontoXMLServiceImpl extends DefaultComponent implements FontoXMLSer
             // We must give up...
             throw new NuxeoException("Cannot find a container for the new document");
         }
-        
-        if(!isAsset) {
+
+        if (!isAsset) {
             // Then, it is an XML document
             if (content.getFilename() == null) {
                 PlatformFunctions pf = new PlatformFunctions();
@@ -171,13 +171,13 @@ public class FontoXMLServiceImpl extends DefaultComponent implements FontoXMLSer
                 content.setFilename(fileName);
             }
         }
-        
+
         String fileName = content.getFilename();
 
-        if(isAsset || StringUtils.isBlank(xmlDocType)) {
+        if (isAsset || StringUtils.isBlank(xmlDocType)) {
             // Use the filemanager so a plugin can decide which type of document to create
             FileManager fileManager = Framework.getService(FileManager.class);
-            
+
             FileImporterContext context = FileImporterContext.builder(session, content, container.getPathAsString())
                                                              .overwrite(true)
                                                              .fileName(fileName)
@@ -210,5 +210,30 @@ public class FontoXMLServiceImpl extends DefaultComponent implements FontoXMLSer
             throws IOException {
 
         return createDocument(session, content, mainDoc, folder, true);
+    }
+
+    @Override
+    public DocumentModel handleOutput(CoreSession session, DocumentModel doc, DocumentModel mainDoc) {
+
+        String chainId = config.getOutputCreationCallbackChain();
+
+        if (StringUtils.isNotBlank(chainId)) {
+            AutomationService as = Framework.getService(AutomationService.class);
+            OperationContext octx = new OperationContext(session);
+            octx.setInput(doc);
+
+            HashMap<String, Serializable> parameters = new HashMap<String, Serializable>();
+            parameters.put(CHAIN_PARAM_MAINDOC, mainDoc == null ? null : mainDoc.getId());
+            try {
+                doc = (DocumentModel) as.run(octx, chainId, parameters);
+                return doc;
+
+            } catch (OperationException e) {
+                throw new NuxeoException("Failed to run the " + chainId + " callback chain", e);
+            }
+
+        }
+
+        return doc;
     }
 }

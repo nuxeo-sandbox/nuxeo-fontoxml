@@ -103,11 +103,14 @@ public class Constants {
 
     public static final String VARIANT_WEB = "web";
 
-    // ========================================> CREATING DOCUMENTS FROM FONTO
+    // ========================================> CREATING/GETING/BROWSING DOCUMENTS FROM FONTO
     // In the PARAM_METADATA object
     public static final String PARAM_FILE_NAME = "fileName";
 
     public static final String PARAM_FILE_EXTENSION = "fileExtension";
+
+    public static final String PARAM_HIERARCHY = "hierarchy";
+    
 
     // ========================================> FONTO TYPES
     public static final String FONTO_TYPE_DOCUMENT = "document";
@@ -131,7 +134,7 @@ public class Constants {
     public static final String FONTO_TYPE_OUTPUT_SUPPORT = "output-support";
 
     // ========================================> FONTO FILE EXTENSIONS AND FILTERS DURING BROWSE
-    public static final String FONTO_FILE_EXT_SETTINGS = ".setting.html";
+    public static final String FONTO_FILE_EXT_SETTINGS = ".settings.html";
 
     public static final String FONTO_FILE_EXT_TEMPLATE = ".template.html";
 
@@ -141,6 +144,9 @@ public class Constants {
 
     public static final List<String> FONTO_DOCUMENT_FILE_EXTENSIONS = Arrays.asList(FONTO_FILE_EXT_SETTINGS,
             FONTO_FILE_EXT_TEMPLATE, FONTO_FILE_EXT_FRAGMENT, FONTO_FILE_EXT_DOCUMENT);
+
+    public static final List<String> FONTO_DOCUMENT_FILE_EXTENSIONS_ARE_XML = Arrays.asList(FONTO_FILE_EXT_SETTINGS,
+            FONTO_FILE_EXT_TEMPLATE, FONTO_FILE_EXT_FRAGMENT);
 
     public static final String FONTO_FILE_EXT_CSS = ".css";
 

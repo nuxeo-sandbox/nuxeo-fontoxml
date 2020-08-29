@@ -10,7 +10,7 @@ import org.nuxeo.ecm.core.api.DocumentModel;
  * This service uses the <code>FontoXMLConfigDescriptor</code> to make decisions when creating a new document or
  * rendering an asset, etc. See fontoxmlservice-service.xml
  * <br />
- * When <b>creating a new document</b> (XML or media - usually an image), we use the "creation" node of the
+ * When <b>creating a new document</b> (XML, HTML or media), we use the "creation" node of the
  * configuration.
  * <ul>
  * <li>A chain can be called (callbackChain). It receives some parameters and can create the document.<br />
@@ -39,6 +39,15 @@ import org.nuxeo.ecm.core.api.DocumentModel;
  * <li>If it is still null at this step, we return file:content</li>
  * <li></li>
  * </ul>
+ * <br />
+ * When a document is created for <b>output</b>, from FontoXML UI, a calbackChain can be set in the XML
+ * configuration.<br>
+ * It receives the newly create document as input and the following parameter(s):
+ * <ul>
+ * <li>mainDocId: string, the UUID of the main document, source for the output</li>
+ * </ul>
+ * The chain can then process more business logic (setup metadata, add more renditions, ...), and must return the input
+ * document( possibly modified)
  * 
  * @since 10.10
  */
@@ -113,5 +122,17 @@ public interface FontoXMLService {
      * @since 10.10
      */
     public Blob getRendition(CoreSession session, DocumentModel doc);
+
+    /**
+     * Calls the output/callbackChain giving the opportunity to process any business logic.
+     * The chain the newly create document as input and receives the mainDocid of the XML
+     * document used to generate the output.
+     * 
+     * @param session
+     * @param doc
+     * @return the document, possibly modified
+     * @since 10.10
+     */
+    public DocumentModel handleOutput(CoreSession session, DocumentModel doc, DocumentModel mainDoc);
 
 }

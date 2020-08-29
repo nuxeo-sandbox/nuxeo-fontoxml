@@ -22,7 +22,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import static com.nuxeo.fontoxml.servlet.Constants.*;
-import static com.nuxeo.fontoxml.servlet.FontoXMLServlet.*;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -318,6 +317,11 @@ public class DocumentBrowser {
                             }
 
                             metadata.put(PARAM_PROPERTIES, properties);
+                            
+                            // F4B
+                            JSONArray hierarchy = Utilities.buildHierarchy(oneDoc);
+                            metadata.put(PARAM_HIERARCHY, hierarchy);
+                            
                             item.put(PARAM_METADATA, metadata);
 
                         } else {

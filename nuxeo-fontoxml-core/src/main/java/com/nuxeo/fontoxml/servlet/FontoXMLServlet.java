@@ -24,6 +24,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.nio.charset.Charset;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
+import java.util.TimeZone;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -39,7 +44,6 @@ import org.apache.commons.logging.LogFactory;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.nuxeo.ecm.automation.features.PlatformFunctions;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.CloseableCoreSession;
@@ -57,8 +61,6 @@ import org.nuxeo.ecm.core.event.Event;
 import org.nuxeo.ecm.core.event.EventService;
 import org.nuxeo.ecm.core.event.impl.DocumentEventContext;
 import org.nuxeo.ecm.core.io.download.DownloadHelper;
-import org.nuxeo.ecm.platform.filemanager.api.FileImporterContext;
-import org.nuxeo.ecm.platform.filemanager.api.FileManager;
 import org.nuxeo.ecm.platform.picture.api.ImageInfo;
 import org.nuxeo.ecm.platform.picture.api.ImagingService;
 import org.nuxeo.runtime.api.Framework;
@@ -85,18 +87,20 @@ public class FontoXMLServlet extends HttpServlet {
 
     private static final Log log = LogFactory.getLog(FontoXMLServlet.class);
     
+    protected final DateFormat dateFormatForFile = new SimpleDateFormat("yyyy-MM-dd'-'HH'h'mm'm'ss's'");
+
     protected class FontoDocumentContext {
-        
+
         DocumentModel doc;
-        
+
         JSONObject documentContext;
-        
+
         // Called when building the document context
-        FontoDocumentContext(DocumentModel doc, JSONObject lock) throws JSONException  {
+        FontoDocumentContext(DocumentModel doc, JSONObject lock) throws JSONException {
             this.doc = doc;
-            
+
             documentContext = new JSONObject();
-            
+
             documentContext.put("lockInfo", lock);
             // Let's add stuff "just in case" (to be removed from the final product, only put what's
             // interesting)
@@ -104,13 +108,13 @@ public class FontoXMLServlet extends HttpServlet {
             documentContext.put(DOC_TYPE, doc.getType());
             documentContext.put(DOC_STATE, doc.getCurrentLifeCycleState());
             // More? (not everything, this travels back and forth)
-            
+
         }
-        
+
         public JSONObject toJSON() {
-            return documentContext; 
+            return documentContext;
         }
-        
+
     }
 
     /**
@@ -179,6 +183,28 @@ public class FontoXMLServlet extends HttpServlet {
 
         default:
             log.warn("POST " + path + ", not handled");
+            /*
+             * String body = IOUtils.toString(req.getReader());
+             * String headers = "";
+             * Enumeration<String> headerNames = req.getHeaderNames();
+             * while (headerNames != null && headerNames.hasMoreElements()) {
+             * String key = headerNames.nextElement();
+             * Enumeration<String> headerValues = req.getHeaders(key);
+             * StringBuilder value = new StringBuilder();
+             * if (headerValues != null && headerValues.hasMoreElements()) {
+             * value.append(headerValues.nextElement());
+             * // If there are multiple values for the header, do comma-separated concat
+             * // as per RFC 2616:
+             * // https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
+             * while (headerValues.hasMoreElements()) {
+             * value.append(",").append(headerValues.nextElement());
+             * }
+             * }
+             * headers += key + " => " + value.toString() + "\n";
+             * }
+             * log.warn("Headers:\n" + headers);
+             * log.warn("Body:\n" + body);
+             */
             resp.sendError(HttpServletResponse.SC_NOT_FOUND);
             break;
         }
@@ -243,14 +269,20 @@ public class FontoXMLServlet extends HttpServlet {
      * "This service is used by FontoXML to load all XML documents it needs during an edit session.
      * This includes documents initially loaded, templates and documents for preview."
      */
+    protected static boolean includAddDocsWarningSent = false;
+
     protected void handleGetDocument(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         // String context = req.getParameter(PARAM_CONTEXT);
         String docId = req.getParameter(PARAM_DOC_ID);
 
         String includeAdditionalDocuments = req.getParameter("includeAdditionalDocuments");
-        if (includeAdditionalDocuments != null) {
-            log.warn("includeAdditionalDocuments set to " + includeAdditionalDocuments
-                    + ", we do not support this parameter in this version");
+        if (includeAdditionalDocuments != null && includeAdditionalDocuments.equals("true")
+                && !includAddDocsWarningSent) {
+            includAddDocsWarningSent = true;
+            log.warn("\n====================================================================\n"
+                    + " includeAdditionalDocuments parameter is not support in this version.\n"
+                    + "(This warning is displayed only once.)\n"
+                    + "====================================================================");
         }
 
         // We assume these parameters were passed and are correctly formated
@@ -299,8 +331,13 @@ public class FontoXMLServlet extends HttpServlet {
                 responseJson.put(PARAM_DOCUMENT_CONTEXT, documentContext.toJSON());
                 // - Optional, revisionId
                 //   (unused in this POC)
-                // - Optional, metadata
-                //   (unused in this POC)
+
+                // With F4B, we must also return the "metadata" and its "hierarchy" object
+                // TODO Make this configurable depending on the distribution of fonto?
+                JSONObject metadata = new JSONObject();
+                JSONArray hierarchy = Utilities.buildHierarchy(doc);
+                metadata.put(PARAM_HIERARCHY, hierarchy);
+                responseJson.put(PARAM_METADATA, metadata);
 
                 String response = responseJson.toString();
                 ServletUtils.sendOKStringResponse(resp, response);
@@ -346,7 +383,8 @@ public class FontoXMLServlet extends HttpServlet {
 
         try {
             JSONObject contextJson = new JSONObject(context);
-            String mainDocId = contextJson.getString(PARAM_DOC_ID);
+            // Otional.
+            String mainDocId = contextJson.optString(PARAM_DOC_ID);
             try (CloseableCoreSession session = CoreInstance.openCoreSession(null)) {
                 DocumentRef assetDocRef = new IdRef(assetId);
                 if (!session.exists(assetDocRef)) {
@@ -461,26 +499,28 @@ public class FontoXMLServlet extends HttpServlet {
             JSONObject metadata = bodyJson.optJSONObject(PARAM_METADATA);
 
             try (CloseableCoreSession session = CoreInstance.openCoreSession(null)) {
-                
+
                 DocumentModel mainDoc = null;
                 DocumentModel folder = null;
-                
+
                 EditSessionToken esToken = new EditSessionToken(context.getString(PARAM_EDIT_SESSION_TOKEN));
                 mainDoc = esToken.getMainDocument(session);
-                
+
                 if (StringUtils.isNotBlank(folderId)) {
                     DocumentRef docRef = new IdRef(folderId);
                     if (session.exists(docRef)) {
                         folder = session.getDocument(docRef);
                     }
                 }
-                
+
                 Blob blob = Blobs.createBlob(content);
-                if(metadata != null) {
+                // Hard code mimetype if we have a filename
+                blob.setMimeType(null);
+                if (metadata != null) {
                     String fileName = metadata.optString(PARAM_FILE_NAME);
                     String fileExtension = metadata.optString(PARAM_FILE_EXTENSION);
-                    if(StringUtils.isNotBlank(fileName) && StringUtils.isNotBlank(fileExtension)) {
-                        if(!fileExtension.startsWith(".")) {
+                    if (StringUtils.isNotBlank(fileName) && StringUtils.isNotBlank(fileExtension)) {
+                        if (!fileExtension.startsWith(".")) {
                             fileName += ".";
                         }
                         fileName += fileExtension;
@@ -489,14 +529,28 @@ public class FontoXMLServlet extends HttpServlet {
                     // Update the mime-type
                     Utilities.getBlobMimeType(blob, true);
                 }
-                
+
                 // Ultimate check, in case someone did not set the mimetype
                 if (blob.getMimeType() == null) {
                     Utilities.getBlobMimeType(blob, true);
                 }
                 
+                // Preprocessing of an output
+                if(metadata != null && metadata.optBoolean("skipProcessing") && mainDoc != null) {
+                    String fileName = mainDoc.getTitle();
+                    String baseName = StringUtils.substringBefore(fileName, ".");
+                    String ext = FilenameUtils.getExtension(blob.getFilename());
+                    String formatedISO = dateFormatForFile.format(new Date());
+                    blob.setFilename(baseName + "-output-" + formatedISO + "." + ext);
+                }
+
                 FontoXMLService fontoService = Framework.getService(FontoXMLService.class);
                 DocumentModel newDoc = fontoService.createDocument(session, blob, mainDoc, folder);
+                
+                // Created. If it was an output => second callback
+                if(metadata != null && metadata.optBoolean("skipProcessing")) {
+                    newDoc = fontoService.handleOutput(session, newDoc, mainDoc);
+                }
 
                 JSONObject responseJson = new JSONObject();
                 responseJson.put(PARAM_DOC_ID, newDoc.getId());
@@ -506,7 +560,7 @@ public class FontoXMLServlet extends HttpServlet {
 
                 FontoDocumentContext documentContext = new FontoDocumentContext(newDoc, lock);
                 responseJson.put(PARAM_DOCUMENT_CONTEXT, documentContext.toJSON());
-                
+
                 // - Optional, revisionId
                 //   (unused in this POC)
                 // - Optional, metadata
@@ -552,22 +606,22 @@ public class FontoXMLServlet extends HttpServlet {
             String docId = context.getString(PARAM_DOC_ID);
 
             try (CloseableCoreSession session = CoreInstance.openCoreSession(null)) {
-                
+
                 DocumentModel mainDoc = null;
                 DocumentModel folder = null;
-                
+
                 EditSessionToken esToken = new EditSessionToken(context.getJSONObject(PARAM_EDIT_SESSION_TOKEN));
                 mainDoc = esToken.getMainDocument(session);
-                
+
                 if (StringUtils.isNotBlank(folderId)) {
                     DocumentRef docRef = new IdRef(folderId);
                     if (session.exists(docRef)) {
                         folder = session.getDocument(docRef);
                     }
                 }
-                
+
                 Blob blob = ServletUtils.createBlobFromPart(file);
-                
+
                 FontoXMLService fontoService = Framework.getService(FontoXMLService.class);
                 DocumentModel asset = fontoService.createAsset(session, blob, mainDoc, folder);
 

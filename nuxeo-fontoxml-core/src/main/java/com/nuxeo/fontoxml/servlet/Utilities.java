@@ -18,8 +18,14 @@
  */
 package com.nuxeo.fontoxml.servlet;
 
+import java.util.List;
+
 import org.apache.commons.lang3.StringUtils;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.nuxeo.ecm.core.api.Blob;
+import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.platform.mimetype.MimetypeDetectionException;
 import org.nuxeo.ecm.platform.mimetype.MimetypeNotFoundException;
@@ -36,6 +42,7 @@ public class Utilities {
      * <ul>
      * <li>If the blob is <code>null</code>, returns <code>null</code></li>
      * <li>If the blob already has a mime-type, returns it</li>
+     * <li>If the file name ends with some specificfonto extension,w e hard code the mime-type</li
      * <li>Else, uses the <code>MimetypeRegistry</code> service to get the mime-type</li>
      * </ul>
      * 
@@ -54,14 +61,26 @@ public class Utilities {
             return mimeType;
         }
 
-        MimetypeRegistry mimeRegistry = Framework.getService(MimetypeRegistry.class);
-        try {
-            mimeType = mimeRegistry.getMimetypeFromBlob(blob);
-        } catch (MimetypeNotFoundException | MimetypeDetectionException e1) {
+        String fileName = blob.getFilename();
+        if (fileName != null) {
+            for (String ext : Constants.FONTO_DOCUMENT_FILE_EXTENSIONS_ARE_XML) {
+                if (fileName.endsWith(ext)) {
+                    mimeType = "text/xml";
+                    break;
+                }
+            }
+        }
+
+        if (StringUtils.isBlank(mimeType)) {
+            MimetypeRegistry mimeRegistry = Framework.getService(MimetypeRegistry.class);
             try {
-                mimeType = mimeRegistry.getMimetypeFromFile(blob.getFile());
-            } catch (MimetypeNotFoundException | MimetypeDetectionException e2) {
-                throw new NuxeoException("Cannot get a Mime Type from the blob or the file", e2);
+                mimeType = mimeRegistry.getMimetypeFromBlob(blob);
+            } catch (MimetypeNotFoundException | MimetypeDetectionException e1) {
+                try {
+                    mimeType = mimeRegistry.getMimetypeFromFile(blob.getFile());
+                } catch (MimetypeNotFoundException | MimetypeDetectionException e2) {
+                    throw new NuxeoException("Cannot get a Mime Type from the blob or the file", e2);
+                }
             }
         }
 
@@ -172,6 +191,35 @@ public class Utilities {
         }
 
         return false;
+    }
+    
+    /**
+     * Returns a JSON array of the path to the doc, with properties expected by Fonto (id, label, type)
+     * 
+     * @param doc
+     * @return the JSONArray containing the hierarchy (the path + details)
+     * @throws JSONException 
+     * @since 10.10
+     */
+    public static JSONArray buildHierarchy(DocumentModel doc) throws JSONException {
+        
+        JSONArray array = new JSONArray();
+        
+        List<DocumentModel> parents = doc.getCoreSession().getParentDocuments(doc.getRef());
+        for(DocumentModel aParent : parents) {
+            JSONObject obj = new JSONObject();
+            obj.put("id", aParent.getId());
+            obj.put("label", aParent.getTitle());
+            if(aParent.isFolder()) {
+                obj.put("type", Constants.FONTO_TYPE_FOLDER);
+            } else {
+                obj.put("type", Constants.FONTO_TYPE_FILE);
+            }
+            
+            array.put(obj);
+        }
+        
+        return array;
     }
 
 }

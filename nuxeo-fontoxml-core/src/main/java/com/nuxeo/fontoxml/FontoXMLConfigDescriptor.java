@@ -38,6 +38,14 @@ public class FontoXMLConfigDescriptor {
         
     }
     
+    @XObject("output")
+    protected static class OutputDescriptor{
+
+        @XNode("callbackChain")
+        protected String callbackChain;
+        
+    }
+    
     @XObject("rendition")
     protected static class RenditionDescriptor{
 
@@ -55,6 +63,9 @@ public class FontoXMLConfigDescriptor {
     @XNode(value="creation")
     protected CreationDescriptor creationDescriptor = new CreationDescriptor();
     
+    @XNode(value="output")
+    protected OutputDescriptor outputDescriptor = new OutputDescriptor();
+    
     @XNode(value="rendition")
     protected RenditionDescriptor renditionDescriptor = new RenditionDescriptor();
     
@@ -64,6 +75,10 @@ public class FontoXMLConfigDescriptor {
 
     public String getDocumentCreationCallbackChain() {
         return creationDescriptor.callbackChain;
+    }
+    
+    public String getOutputCreationCallbackChain() {
+        return outputDescriptor.callbackChain;
     }
 
     public String getRenditionCallbackChain() {

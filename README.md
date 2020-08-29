@@ -8,6 +8,7 @@
 - [Using FontoXML and this Plugin](#using-fontoxml-and-this-plugin)
 - [Configuration](configuration)
   * [Creation of a New Document](#creating-a-new-document)
+  * [Creation of a New Output](#creating-a-new-output)
   * [Rendering an Asset](#rendering-an-asset) 
 - [Deployment - Displaying Fonto in the UI](#deployment-displaying-fonto-in-the-ui)
   * [Deployment of Fonto](#deployment-of-fonto)
@@ -60,7 +61,7 @@ To use it, you will follow these steps:
 
 The plugin can be configured with XML to tune its behavior when FontoXML is asking to render an asset or to create a new document from its UI (typically, a new XML or an Image)
 
-This is done via an XML contribution. The dfeault contribution is this one, we will explain the different properties below:
+This is done via an XML contribution. The default contribution is this one, we will explain the different properties below:
 
 ```
 <extension target="com.nuxeo.fontoxml.FontoXMLService" point="configuration">
@@ -69,6 +70,11 @@ This is done via an XML contribution. The dfeault contribution is this one, we w
       <typeForNewXMLDocument>File</typeForNewXMLDocument>
       <callbackChain></callbackChain>
     </creation>
+    
+    <output>
+      <callbackChain></callbackChain>
+    </output>
+    
     <rendition>
       <callbackChain></callbackChain>
       <defaultRendition>OriginalJpeg</defaultRendition>
@@ -96,6 +102,13 @@ When FontoXML sends a `POST /document` request to create a new document, the plu
     * if `typeForNewXMLDocument`is not empty, the plugin creates a document of this type
     * Else, it uses the FileManager to create the asset from its blob
   * Else, it uses the FileManager to create the asset from its blob
+
+### Creation of a New Output
+From the FontXML UI, and when deploying Fonto For Business, the user can generate an output from a fonto document. This will be an html, possibly a docx [NOTE: This plugin does not support yet the docx output].
+
+The `callbackChain` of `output` , if any, will be called once the document is created. It receives in the `mainDocId` parameter the ID of the document used to generate the output, and must return the input document, possibly modified (typically, new metadata added)
+
+Notice that the `callbackChain` of `creation` will also has been called previously, if set.
 
 
 ### When FontoXML Requests to Render an Asset

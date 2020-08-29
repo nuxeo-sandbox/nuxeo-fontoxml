@@ -18,10 +18,15 @@
           <creation>
             <!-- The chain will create the document -->
             <callbackChain>javascript.DocumentCreationFromXMLBlobForFonto</callbackChain>
-            <!-- If the no chain or it returned null, this Document type will be used -->
+            <!-- If callbackChain is empty or the chain returned null, this Document type will be used -->
             <typeForNewXMLDocument>File</typeForNewXMLDocument>
             <!-- If the chain did not create a doc and there is no default type, we call the FileManage -->
           </creation>
+          
+          <output>
+            <!-- Chain called when an output is created via Fonto -->
+            <callbackChain>javascript.FontOutputDocumentCreated</callbackChain>
+          </output>
 
           <rendition>
             <!-- Chain ID that returns the rendition; Can be empty. -->
@@ -45,6 +50,9 @@
         <typeForNewXMLDocument>File</typeForNewXMLDocument>
         <callbackChain></callbackChain>
       </creation>
+      <output>
+        <callbackChain></callbackChain>
+      </output>
       <rendition>
         <callbackChain></callbackChain>
         <defaultRendition>OriginalJpeg</defaultRendition>
