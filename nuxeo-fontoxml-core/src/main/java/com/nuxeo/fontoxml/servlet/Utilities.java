@@ -205,6 +205,7 @@ public class Utilities {
         
         JSONArray array = new JSONArray();
         
+        // getParentDocuments also returns the document itseld
         List<DocumentModel> parents = doc.getCoreSession().getParentDocuments(doc.getRef());
         for(DocumentModel aParent : parents) {
             JSONObject obj = new JSONObject();
