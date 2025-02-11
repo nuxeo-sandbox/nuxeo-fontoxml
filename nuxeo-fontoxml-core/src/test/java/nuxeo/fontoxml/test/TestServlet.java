@@ -54,6 +54,7 @@ import org.nuxeo.ecm.platform.picture.api.adapters.MultiviewPicture;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
+import org.nuxeo.runtime.test.runner.TransactionalFeature;
 
 import com.google.common.collect.ImmutableMap;
 import com.nuxeo.fontoxml.servlet.Constants;
@@ -65,11 +66,8 @@ import nuxeo.fontoxml.test.utils.Utilities;
 @RunWith(FeaturesRunner.class)
 @Features(AutomationFeature.class)
 @RepositoryConfig(init = DefaultRepositoryInit.class, cleanup = Granularity.METHOD)
-@Deploy("org.nuxeo.ecm.platform.types.api")
-@Deploy("org.nuxeo.ecm.platform.types.core")
-@Deploy("org.nuxeo.ecm.platform.picture.api")
+@Deploy("org.nuxeo.ecm.platform.types")
 @Deploy("org.nuxeo.ecm.platform.picture.core")
-@Deploy("org.nuxeo.ecm.platform.picture.convert")
 @Deploy("org.nuxeo.ecm.platform.tag")
 @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core")
 public class TestServlet extends MockedServlet {
@@ -83,6 +81,9 @@ public class TestServlet extends MockedServlet {
 
     @Inject
     protected ImagingService imagingService;
+
+    @Inject
+    protected TransactionalFeature transactionalFeature;
 
     @Test
     public void testHeartbeat() throws Exception {
@@ -205,6 +206,7 @@ public class TestServlet extends MockedServlet {
 
         // Wait for picture:views to be calculated
         Utilities.waitForAsyncWorkAndStartTransaction(session);
+        transactionalFeature.nextTransaction();
 
         // Store info to compare with
         Blob originalBlob = (Blob) doc.getPropertyValue("file:content");

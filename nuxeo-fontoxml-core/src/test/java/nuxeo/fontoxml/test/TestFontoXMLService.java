@@ -43,6 +43,7 @@ import org.nuxeo.ecm.platform.picture.api.adapters.MultiviewPicture;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
+import org.nuxeo.runtime.test.runner.TransactionalFeature;
 
 import com.nuxeo.fontoxml.FontoXMLConfigDescriptor;
 import com.nuxeo.fontoxml.FontoXMLService;
@@ -53,12 +54,9 @@ import nuxeo.fontoxml.test.utils.Utilities;
 @RunWith(FeaturesRunner.class)
 @Features(AutomationFeature.class)
 @RepositoryConfig(init = DefaultRepositoryInit.class, cleanup = Granularity.METHOD)
-@Deploy("org.nuxeo.ecm.platform.types.api")
-@Deploy("org.nuxeo.ecm.platform.types.core")
+@Deploy("org.nuxeo.ecm.platform.types")
 @Deploy("org.nuxeo.ecm.platform.thumbnail")
-@Deploy("org.nuxeo.ecm.platform.picture.api")
 @Deploy("org.nuxeo.ecm.platform.picture.core")
-@Deploy("org.nuxeo.ecm.platform.picture.convert")
 @Deploy("org.nuxeo.ecm.platform.tag")
 @Deploy("org.nuxeo.ecm.automation.scripting")
 @Deploy("nuxeo.fontoxml.nuxeo-fontoxml-core")
@@ -72,6 +70,9 @@ public class TestFontoXMLService {
 
     @Inject
     protected FontoXMLService fontoxmlservice;
+
+    @Inject
+    protected TransactionalFeature transactionalFeature;
 
     @Test
     public void testServiceIsDeployed() {
@@ -105,6 +106,7 @@ public class TestFontoXMLService {
 
         // Wait for picture:views to be calculated
         Utilities.waitForAsyncWorkAndStartTransaction(session);
+        transactionalFeature.nextTransaction();
 
         // Get values for the test below
         MultiviewPicture mvp = doc.getAdapter(MultiviewPicture.class);
@@ -132,6 +134,7 @@ public class TestFontoXMLService {
 
         // Wait for picture:views to be calculated
         Utilities.waitForAsyncWorkAndStartTransaction(session);
+        transactionalFeature.nextTransaction();
 
         // Get values for the test below
         MultiviewPicture mvp = doc.getAdapter(MultiviewPicture.class);
@@ -156,6 +159,7 @@ public class TestFontoXMLService {
 
         // Wait for picture:views to be calculated
         Utilities.waitForAsyncWorkAndStartTransaction(session);
+        transactionalFeature.nextTransaction();
 
         // The XML contribution states to get the value in thumb:thumbnail field,
         // let's fill it with the "Thumbnail" blob
@@ -186,6 +190,7 @@ public class TestFontoXMLService {
 
         // Wait for picture:views to be calculated
         Utilities.waitForAsyncWorkAndStartTransaction(session);
+        transactionalFeature.nextTransaction();
 
         // The XML contribution states to get the value in thumb:thumbnail field,
         // we let it empty so the service will get the main blob

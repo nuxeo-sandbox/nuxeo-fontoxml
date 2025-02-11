@@ -2,18 +2,24 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>org.nuxeo.ecm.distribution</groupId>
-    <artifactId>nuxeo-distribution</artifactId>
-    <version>10.10</version>
+    <groupId>org.nuxeo</groupId>
+    <artifactId>nuxeo-parent</artifactId>
+    <version>2023.24</version>
   </parent>
 
   <groupId>nuxeo.fontoxml</groupId>
   <artifactId>nuxeo-fontoxml-parent</artifactId>
-  <version>10.10-SNAPSHOT</version>
+  <version>2023.1.0-SNAPSHOT</version>
   <name>Nuxeo fontoxml parent</name>
   <description>Integration with Fonto XML</description>
   <packaging>pom</packaging>
-
+  <properties>
+    <!-- Skip Nuxeo enforcer rules by default -->
+    <nuxeo.skip.enforcer>true</nuxeo.skip.enforcer>
+    <nuxeo.target.version>2023.*</nuxeo.target.version>
+    <skipDocker>true</skipDocker>
+    <pushReleaseChanges>false</pushReleaseChanges>
+  </properties>
   <modules>
     <module>nuxeo-fontoxml-core</module>
     <module>nuxeo-fontoxml-package</module>
@@ -25,55 +31,6 @@
   <ciManagement />
   <developers />
   <distributionManagement />
-
-  <repositories>
-    <repository>
-      <id>public</id>
-      <url>http://maven.nuxeo.org/nexus/content/groups/public</url>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </repository>
-    <repository>
-      <id>public-snapshot</id>
-      <url>http://maven.nuxeo.org/nexus/content/groups/public-snapshot</url>
-      <releases>
-        <enabled>false</enabled>
-      </releases>
-      <snapshots>
-        <updatePolicy>always</updatePolicy>
-        <enabled>true</enabled>
-      </snapshots>
-    </repository>
-    <repository>
-      <id>nuxeo-studio</id>
-      <url>https://connect.nuxeo.com/nuxeo/site/studio/maven</url>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <updatePolicy>always</updatePolicy>
-        <enabled>true</enabled>
-      </snapshots>
-    </repository>
-  </repositories>
-
-  <pluginRepositories>
-    <pluginRepository>
-      <id>public</id>
-      <url>http://maven.nuxeo.org/nexus/content/groups/public</url>
-      <name>Nuxeo releases</name>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </pluginRepository>
-  </pluginRepositories>
   <dependencyManagement>
     <dependencies>
       <dependency>
@@ -88,4 +45,65 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+<repositories>
+    <repository>
+      <id>maven-public</id>
+      <url>https://packages.nuxeo.com/repository/maven-public/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <updatePolicy>always</updatePolicy>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>maven-private</id>
+      <url>https://packages.nuxeo.com/repository/maven-private/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <updatePolicy>always</updatePolicy>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+  <pluginRepositories>
+    <pluginRepository>
+      <id>maven-public</id>
+      <url>https://packages.nuxeo.com/repository/maven-public/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </pluginRepository>
+  </pluginRepositories>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>3.1.1</version>
+        <configuration>
+          <projectVersionPolicyId>SemVerVersionPolicy</projectVersionPolicyId>
+          <tagNameFormat>@{project.version}</tagNameFormat>
+          <autoVersionSubmodules>true</autoVersionSubmodules>
+          <scmReleaseCommitComment>Release @{releaseLabel}</scmReleaseCommitComment>
+          <scmDevelopmentCommitComment>Post Release @{releaseLabel}</scmDevelopmentCommitComment>
+          <pushChanges>${pushReleaseChanges}</pushChanges>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>versions-maven-plugin</artifactId>
+        <version>2.18.0</version>
+        <configuration>
+          <ruleSet/>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>
