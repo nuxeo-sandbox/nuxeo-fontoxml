@@ -105,11 +105,7 @@ public class Utilities {
         }
 
         String mimeType = Utilities.getBlobMimeType(blob, true);
-        if (mimeType.startsWith("application/xml") || mimeType.endsWith("xml")) {
-            return true;
-        }
-
-        return false;
+        return mimeType.startsWith("application/xml") || mimeType.endsWith("xml");
 
     }
 
@@ -132,11 +128,7 @@ public class Utilities {
          * text/xml, text/plain, text/xml, text/css, text/sgml, ...
          * application/xml, application/xhtml+xml, ...
          */
-        if (mimeType.startsWith("text/") || Utilities.looksLikeXml(blob)) {
-            return true;
-        }
-
-        return false;
+        return mimeType.startsWith("text/") || Utilities.looksLikeXml(blob);
 
     }
 

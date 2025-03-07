@@ -53,13 +53,13 @@ import org.nuxeo.ecm.core.api.DocumentModel;
  */
 public interface FontoXMLService {
 
-    public static final String CHAIN_PARAM_DOCTYPE_FOR_XML = "docTypeForNewXML";
+    String CHAIN_PARAM_DOCTYPE_FOR_XML = "docTypeForNewXML";
 
-    public static final String CHAIN_PARAM_MAINDOC = "mainDocId";
+    String CHAIN_PARAM_MAINDOC = "mainDocId";
 
-    public static final String CHAIN_PARAM_FOLDER = "folderId";
+    String CHAIN_PARAM_FOLDER = "folderId";
 
-    public static final String CHAIN_PARAM_IS_ASSET = "isAsset";
+    String CHAIN_PARAM_IS_ASSET = "isAsset";
 
     /**
      * Return a DocumentModel created from the content, which is XML.
@@ -82,7 +82,7 @@ public interface FontoXMLService {
      * @return the created document
      * @since 10.10
      */
-    public DocumentModel createDocument(CoreSession session, Blob content, DocumentModel mainDoc, DocumentModel folder)
+    DocumentModel createDocument(CoreSession session, Blob content, DocumentModel mainDoc, DocumentModel folder)
             throws IOException;
 
     /**
@@ -106,7 +106,7 @@ public interface FontoXMLService {
      * @return the created document
      * @since 10.10
      */
-    public DocumentModel createAsset(CoreSession session, Blob content, DocumentModel mainDoc, DocumentModel folder)
+    DocumentModel createAsset(CoreSession session, Blob content, DocumentModel mainDoc, DocumentModel folder)
             throws IOException;
 
     /**
@@ -121,7 +121,7 @@ public interface FontoXMLService {
      * @return the blob to send back to FontoXML
      * @since 10.10
      */
-    public Blob getRendition(CoreSession session, DocumentModel doc);
+    Blob getRendition(CoreSession session, DocumentModel doc);
 
     /**
      * Calls the output/callbackChain giving the opportunity to process any business logic.
@@ -133,6 +133,6 @@ public interface FontoXMLService {
      * @return the document, possibly modified
      * @since 10.10
      */
-    public DocumentModel handleOutput(CoreSession session, DocumentModel doc, DocumentModel mainDoc);
+    DocumentModel handleOutput(CoreSession session, DocumentModel doc, DocumentModel mainDoc);
 
 }

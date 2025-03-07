@@ -13,19 +13,14 @@ import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.NuxeoException;
-import org.nuxeo.ecm.core.api.PropertyException;
 import org.nuxeo.ecm.platform.filemanager.api.FileImporterContext;
 import org.nuxeo.ecm.platform.filemanager.api.FileManager;
-import org.nuxeo.ecm.platform.mimetype.MimetypeDetectionException;
-import org.nuxeo.ecm.platform.mimetype.MimetypeNotFoundException;
-import org.nuxeo.ecm.platform.mimetype.interfaces.MimetypeRegistry;
 import org.nuxeo.ecm.platform.picture.api.PictureView;
 import org.nuxeo.ecm.platform.picture.api.adapters.MultiviewPicture;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.model.ComponentInstance;
 import org.nuxeo.runtime.model.DefaultComponent;
 
-import com.nuxeo.fontoxml.servlet.Constants;
 import com.nuxeo.fontoxml.servlet.Utilities;
 
 public class FontoXMLServiceImpl extends DefaultComponent implements FontoXMLService {
@@ -126,7 +121,7 @@ public class FontoXMLServiceImpl extends DefaultComponent implements FontoXMLSer
             AutomationService as = Framework.getService(AutomationService.class);
             OperationContext octx = new OperationContext(session);
             octx.setInput(content);
-            HashMap<String, Serializable> parameters = new HashMap<String, Serializable>();
+            HashMap<String, Serializable> parameters = new HashMap<>();
             parameters.put(CHAIN_PARAM_MAINDOC, mainDoc == null ? null : mainDoc.getId());
             parameters.put(CHAIN_PARAM_FOLDER, folder == null ? null : folder.getId());
             parameters.put(CHAIN_PARAM_IS_ASSET, false);
@@ -222,7 +217,7 @@ public class FontoXMLServiceImpl extends DefaultComponent implements FontoXMLSer
             OperationContext octx = new OperationContext(session);
             octx.setInput(doc);
 
-            HashMap<String, Serializable> parameters = new HashMap<String, Serializable>();
+            HashMap<String, Serializable> parameters = new HashMap<>();
             parameters.put(CHAIN_PARAM_MAINDOC, mainDoc == null ? null : mainDoc.getId());
             try {
                 doc = (DocumentModel) as.run(octx, chainId, parameters);

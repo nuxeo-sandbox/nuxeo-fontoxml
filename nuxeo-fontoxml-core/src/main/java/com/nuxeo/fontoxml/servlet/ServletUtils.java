@@ -101,7 +101,7 @@ public class ServletUtils {
         int lastUnixSeparator = filename.lastIndexOf('/');
         int lastSeparator = Math.max(lastWinSeparator, lastUnixSeparator);
         if (lastSeparator != -1) {
-            res = filename.substring(lastSeparator + 1, filename.length());
+            res = filename.substring(lastSeparator + 1);
         } else {
             res = filename;
         }

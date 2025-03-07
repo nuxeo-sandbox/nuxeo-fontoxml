@@ -157,7 +157,7 @@ public class DocumentBrowser {
 
             // For quick search of the type that is wanted
             // The query should have already return only the types of documents we want
-            ArrayList<String> assetTypesList = new ArrayList<String>();
+            ArrayList<String> assetTypesList = new ArrayList<>();
             for (int i = 0; i < assetTypes.length(); i++) {
                 assetTypesList.add(assetTypes.getString(i));
             }
@@ -180,7 +180,7 @@ public class DocumentBrowser {
                     break;
                 }
             }
-            if (infoMsg.length() > 0) {
+            if (!infoMsg.isEmpty()) {
                 log.warn("This POC does not handle browsing the following: " + infoMsg);
             }
             // ======================================== </Just for the POC context>
@@ -307,7 +307,7 @@ public class DocumentBrowser {
                             aDate = (Calendar) oneDoc.getPropertyValue("dc:modified");
                             properties.put("modified", FORMATTER.format(aDate));
                             Set<String> tags = tagService.getTags(session, oneDoc.getId());
-                            if (tags != null && tags.size() > 0) {
+                            if (tags != null && !tags.isEmpty()) {
                                 properties.put("tags", String.join(",", tags));
                             }
                             properties.put("fileSize", FileUtils.byteCountToDisplaySize(blob.getLength()));

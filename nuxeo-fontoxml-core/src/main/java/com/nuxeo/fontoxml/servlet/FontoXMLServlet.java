@@ -22,8 +22,9 @@ import static com.nuxeo.fontoxml.servlet.Constants.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.Serial;
 import java.io.Serializable;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -81,13 +82,14 @@ import com.nuxeo.fontoxml.FontoXMLService;
  */
 public class FontoXMLServlet extends HttpServlet {
 
+    @Serial
     private static final long serialVersionUID = 1L;
 
     private static final Log log = LogFactory.getLog(FontoXMLServlet.class);
     
     protected final DateFormat dateFormatForFile = new SimpleDateFormat("yyyy-MM-dd'-'HH'h'mm'm'ss's'");
 
-    protected class FontoDocumentContext {
+    protected static class FontoDocumentContext {
 
         DocumentModel doc;
 
@@ -277,10 +279,12 @@ public class FontoXMLServlet extends HttpServlet {
         if (includeAdditionalDocuments != null && includeAdditionalDocuments.equals("true")
                 && !includAddDocsWarningSent) {
             includAddDocsWarningSent = true;
-            log.warn("\n====================================================================\n"
-                    + " includeAdditionalDocuments parameter is not support in this version.\n"
-                    + "(This warning is displayed only once.)\n"
-                    + "====================================================================");
+            log.warn("""
+                    ====================================================================
+                     includeAdditionalDocuments parameter is not support in this version.
+                    (This warning is displayed only once.)
+                    ====================================================================
+                    """);
         }
 
         // We assume these parameters were passed and are correctly formated
@@ -591,7 +595,7 @@ public class FontoXMLServlet extends HttpServlet {
         Part request = req.getPart(PARAM_REQUEST);
         Part file = req.getPart(PARAM_FILE);
 
-        String requestStr = IOUtils.toString(request.getInputStream(), Charset.forName("UTF-8"));
+        String requestStr = IOUtils.toString(request.getInputStream(), StandardCharsets.UTF_8);
         try {
             JSONObject requestJson = new JSONObject(requestStr);
             // Required
@@ -834,9 +838,7 @@ public class FontoXMLServlet extends HttpServlet {
                     if (isLockedByMe || lockRemoved) {
                         JSONObject bodyResult = null;
                         bodyResult = new JSONObject();
-                        if (documentContext != null) {
-                            bodyResult.put(PARAM_DOCUMENT_CONTEXT, documentContext);
-                        }
+                        bodyResult.put(PARAM_DOCUMENT_CONTEXT, documentContext);
                         if (StringUtils.isNotBlank(revisionId)) {
                             bodyResult.put(PARAM_REVISION_ID, revisionId);
                         }

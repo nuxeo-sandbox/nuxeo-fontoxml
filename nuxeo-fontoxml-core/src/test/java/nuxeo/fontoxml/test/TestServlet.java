@@ -25,12 +25,10 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.Map;
 
 import jakarta.inject.Inject;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
 
@@ -51,6 +49,7 @@ import org.nuxeo.ecm.platform.picture.api.ImageInfo;
 import org.nuxeo.ecm.platform.picture.api.ImagingService;
 import org.nuxeo.ecm.platform.picture.api.PictureView;
 import org.nuxeo.ecm.platform.picture.api.adapters.MultiviewPicture;
+import org.nuxeo.ecm.platform.picture.core.ImagingCoreFeature;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -64,7 +63,7 @@ import nuxeo.fontoxml.test.utils.TestMockersAndFakers;
 import nuxeo.fontoxml.test.utils.Utilities;
 
 @RunWith(FeaturesRunner.class)
-@Features(AutomationFeature.class)
+@Features({AutomationFeature.class, ImagingCoreFeature.class})
 @RepositoryConfig(init = DefaultRepositoryInit.class, cleanup = Granularity.METHOD)
 @Deploy("org.nuxeo.ecm.platform.types")
 @Deploy("org.nuxeo.ecm.platform.picture.core")
@@ -178,7 +177,7 @@ public class TestServlet extends MockedServlet {
         JSONObject context = new JSONObject();
         context.put(Constants.PARAM_DOC_ID, doc.getId());
 
-        Map<String, String> params = new HashMap<String, String>();
+        Map<String, String> params = new HashMap<>();
         params.put(Constants.PARAM_CONTEXT, context.toString());
         params.put(Constants.PARAM_ID, doc.getId());// Using same doc to get the blob
         params.put(Constants.PARAM_VARIANT, Constants.VARIANT_THUMBNAIL);
@@ -217,7 +216,7 @@ public class TestServlet extends MockedServlet {
         JSONObject context = new JSONObject();
         context.put(Constants.PARAM_DOC_ID, doc.getId());
 
-        Map<String, String> params = new HashMap<String, String>();
+        Map<String, String> params = new HashMap<>();
         params.put(Constants.PARAM_CONTEXT, context.toString());
         params.put(Constants.PARAM_ID, doc.getId());// Using same doc to get the blob
 

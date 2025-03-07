@@ -63,9 +63,7 @@ public class MockedServlet {
         when(mockRequest.getMethod()).thenReturn(httpVerb);
         when(mockRequest.getPathInfo()).thenReturn(pathInfo);
         if (params != null) {
-            params.forEach((k, v) -> {
-                when(mockRequest.getParameter(k)).thenReturn(v);
-            });
+            params.forEach((k, v) -> when(mockRequest.getParameter(k)).thenReturn(v));
         }
 
         if (body == null) {
