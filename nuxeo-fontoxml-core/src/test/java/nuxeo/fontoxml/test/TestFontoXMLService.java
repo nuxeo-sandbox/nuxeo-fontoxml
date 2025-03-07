@@ -24,7 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.Serializable;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Ignore;
@@ -40,6 +40,7 @@ import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.platform.picture.api.ImagingService;
 import org.nuxeo.ecm.platform.picture.api.PictureView;
 import org.nuxeo.ecm.platform.picture.api.adapters.MultiviewPicture;
+import org.nuxeo.ecm.platform.picture.core.ImagingCoreFeature;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -52,7 +53,7 @@ import com.nuxeo.fontoxml.FontoXMLServiceImpl;
 import nuxeo.fontoxml.test.utils.Utilities;
 
 @RunWith(FeaturesRunner.class)
-@Features(AutomationFeature.class)
+@Features({AutomationFeature.class, ImagingCoreFeature.class})
 @RepositoryConfig(init = DefaultRepositoryInit.class, cleanup = Granularity.METHOD)
 @Deploy("org.nuxeo.ecm.platform.types")
 @Deploy("org.nuxeo.ecm.platform.thumbnail")
@@ -64,9 +65,6 @@ public class TestFontoXMLService {
 
     @Inject
     protected CoreSession session;
-
-    @Inject
-    protected ImagingService imagingService;
 
     @Inject
     protected FontoXMLService fontoxmlservice;
