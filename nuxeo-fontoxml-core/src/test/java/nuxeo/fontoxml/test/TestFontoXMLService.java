@@ -155,7 +155,6 @@ public class TestFontoXMLService {
         DocumentModel doc = Utilities.createDocumentFromFile(session, "/", "Picture", "home_bg.jpg", "image/jpeg");
 
         // Wait for picture:views to be calculated
-        Utilities.waitForAsyncWorkAndStartTransaction(session);
         transactionalFeature.nextTransaction();
 
         // The XML contribution states to get the value in thumb:thumbnail field,
@@ -165,8 +164,6 @@ public class TestFontoXMLService {
         Blob thumbnail = pv.getBlob();
         doc.addFacet("Thumbnail");
         doc.setPropertyValue("thumb:thumbnail", (Serializable) thumbnail);
-        doc = session.saveDocument(doc);
-        session.save();
 
         // Call the service
         Blob result = fontoxmlservice.getRendition(session, doc);
